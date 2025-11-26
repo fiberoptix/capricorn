@@ -119,7 +119,8 @@ def classify_and_copy_files(base_dir=None):
     """
     # Set up directories
     if base_dir is None:
-        base_dir = Path('/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data')
+        # Use path relative to this module - works in both DEV and PROD Docker
+        base_dir = Path(__file__).parent / "data"
     else:
         base_dir = Path(base_dir)
     
