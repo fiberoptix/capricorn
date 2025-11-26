@@ -1,0 +1,2 @@
+"""Capricorn Finance Backend Application"""
+

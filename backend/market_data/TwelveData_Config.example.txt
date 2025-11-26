@@ -1,0 +1,32 @@
+# Twelve Data Configuration for Capricorn Portfolio Manager
+# API integration for real-time stock quotes
+#
+# To use this:
+# 1. Copy this file to TwelveData_Config.txt
+# 2. Get a free API key from https://twelvedata.com/
+# 3. Replace YOUR_API_KEY_HERE with your actual key
+
+PROVIDER=twelve_data
+API_KEY=YOUR_API_KEY_HERE
+TIMEZONE=America/New_York
+
+# Refresh throttling & batching - OPTIMIZED FOR FREE TIER
+# 5 minutes = 300 seconds (allows 78 refreshes/day during market hours)
+TTL_SECONDS=300
+MAX_BATCH=8
+
+# Refresh behavior - automatic during market hours
+REFRESH_MODE=market_hours_auto
+MARKET_START=09:30
+MARKET_END=16:00
+
+# Optional: capture official daily close
+DAILY_CLOSE_ENABLED=true
+DAILY_CLOSE_TIME=16:05
+
+# What tickers to refresh
+# Options: holdings (from transactions), tracked (from market_prices table), custom
+SYMBOLS_SOURCE=holdings
+# If SYMBOLS_SOURCE=custom, provide comma-separated list below
+CUSTOM_SYMBOLS=
+

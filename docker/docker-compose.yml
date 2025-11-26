@@ -1,0 +1,64 @@
+services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: capricorn-frontend
+    ports:
+      - "5001:5000"
+    environment:
+      - VITE_API_URL=http://localhost:5002
+      - VITE_BUILD_NUMBER=${BUILD_NUMBER:-1}
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: capricorn-backend
+    ports:
+      - "5002:8000"
+    environment:
+      - DATABASE_URL=postgresql://capricorn:capricorn2025@postgres:5432/capricorn_db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+      - BUILD_NUMBER=${BUILD_NUMBER:-1}
+    volumes:
+      - ../backend:/app
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15.5-alpine
+    container_name: capricorn-postgres
+    ports:
+      - "5003:5432"
+    environment:
+      - POSTGRES_USER=capricorn
+      - POSTGRES_PASSWORD=capricorn2025
+      - POSTGRES_DB=capricorn_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: capricorn-redis
+    ports:
+      - "5004:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
