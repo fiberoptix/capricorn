@@ -1,0 +1,72 @@
+# Capricorn PROD Docker Compose Configuration
+# Usage: docker-compose -f docker-compose.prod.yml up -d --build
+
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend.prod
+    container_name: capricorn-frontend
+    ports:
+      - "5001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend.prod
+    container_name: capricorn-backend
+    ports:
+      - "5002:8000"
+    environment:
+      - DATABASE_URL=postgresql://capricorn:capricorn2025@postgres:5432/capricorn_db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+      - DEBUG=false
+    volumes:
+      - ../backend/market_data:/app/market_data:ro
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  postgres:
+    image: postgres:15.5-alpine
+    container_name: capricorn-postgres
+    # No external port - internal network only in PROD
+    environment:
+      - POSTGRES_USER=capricorn
+      - POSTGRES_PASSWORD=capricorn2025
+      - POSTGRES_DB=capricorn_db
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ../database/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: capricorn-redis
+    # No external port - internal network only in PROD
+    volumes:
+      - redis_data_prod:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
+networks:
+  capricorn-network:
+    driver: bridge
+
