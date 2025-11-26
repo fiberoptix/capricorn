@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Box, Typography, IconButton, Chip, Switch, Tooltip, CircularProgress } from '@mui/material';
-import { Brightness4, Brightness7, TrendingUp } from '@mui/icons-material';
+import { Box, Typography, IconButton, Chip, Switch, Tooltip, CircularProgress, Alert, AlertTitle, Link } from '@mui/material';
+import { Brightness4, Brightness7, TrendingUp, WarningAmber } from '@mui/icons-material';
 import { useThemeMode } from '../theme/ThemeProvider';
 import { useQueryClient } from '@tanstack/react-query';
 import { API_V1_URL } from '../config/api';
+
+// Constants for localStorage keys
+const TWELVEDATA_BANNER_DISMISSED_KEY = 'capricorn_twelvedata_banner_dismissed_timestamp';
 
 interface DockerStatus {
   total: number;
@@ -49,6 +52,48 @@ export const Banner: React.FC = () => {
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const statusPollRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // TwelveData API key configuration state
+  const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true); // Assume configured until we check
+  const [showApiBanner, setShowApiBanner] = useState<boolean>(false);
+
+  // Check TwelveData API key status and show banner if needed
+  useEffect(() => {
+    const checkApiKeyStatus = async () => {
+      try {
+        const response = await fetch(`${API_V1_URL}/settings/twelvedata-status`);
+        if (response.ok) {
+          const data = await response.json();
+          setApiKeyConfigured(data.is_configured);
+          
+          // Show banner if not configured AND (never dismissed OR 7 days passed)
+          if (!data.is_configured) {
+            const dismissedTimestamp = localStorage.getItem(TWELVEDATA_BANNER_DISMISSED_KEY);
+            if (!dismissedTimestamp) {
+              // Never dismissed - show banner
+              setShowApiBanner(true);
+            } else {
+              // Check if 7 days have passed
+              const daysSinceDismissal = (Date.now() - parseInt(dismissedTimestamp)) / (1000 * 60 * 60 * 24);
+              if (daysSinceDismissal >= 7) {
+                setShowApiBanner(true);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Fail silently - assume configured if we can't check
+        console.error('Failed to check TwelveData API status:', error);
+      }
+    };
+    checkApiKeyStatus();
+  }, []);
+
+  // Handle dismissing the API key banner
+  const handleDismissApiBanner = () => {
+    localStorage.setItem(TWELVEDATA_BANNER_DISMISSED_KEY, Date.now().toString());
+    setShowApiBanner(false);
+  };
 
   // Fetch realtime pricing setting from backend on mount
   useEffect(() => {
@@ -280,18 +325,48 @@ export const Banner: React.FC = () => {
   const allContainersUp = dockerStatus.running === dockerStatus.total;
 
   return (
-    <Box
-      sx={{
-        height: '100px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        px: 4,
-        borderBottom: 1,
-        borderColor: 'divider',
-        bgcolor: 'background.paper',
-      }}
-    >
+    <>
+      {/* Dismissible banner when TwelveData API key not configured */}
+      {showApiBanner && (
+        <Alert 
+          severity="warning"
+          onClose={handleDismissApiBanner}
+          sx={{ 
+            borderRadius: 0, 
+            mb: 0,
+            '& .MuiAlert-message': { width: '100%' }
+          }}
+        >
+          <AlertTitle sx={{ fontWeight: 'bold' }}>Live Stock Prices Disabled</AlertTitle>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="body2">
+              TwelveData API key not configured. Portfolio values will use cost basis (purchase price).
+            </Typography>
+            <Link 
+              href="https://github.com/fiberoptix/capricorn#twelvedata-api-optional---for-live-stock-prices" 
+              target="_blank"
+              sx={{ fontWeight: 'bold' }}
+            >
+              Configure API Key
+            </Link>
+            <Typography variant="body2">
+              or enter prices manually in Portfolio → Market Prices.
+            </Typography>
+          </Box>
+        </Alert>
+      )}
+      <Box
+        sx={{
+          height: '100px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 4,
+          borderBottom: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
       {/* Left: Logo & App Name */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box
@@ -366,6 +441,12 @@ export const Banner: React.FC = () => {
               >
                 {realtimePricingEnabled ? 'Live Prices: ON' : 'Live Prices: OFF'}
               </Typography>
+              {/* Warning icon when API key not configured */}
+              {!apiKeyConfigured && (
+                <Tooltip title="TwelveData API key not configured. Prices will use cost basis.">
+                  <WarningAmber sx={{ fontSize: 16, color: 'warning.main', ml: 0.5 }} />
+                </Tooltip>
+              )}
               <Switch
                 checked={realtimePricingEnabled}
                 onChange={handleToggle}
@@ -423,6 +504,7 @@ export const Banner: React.FC = () => {
         </IconButton>
       </Box>
     </Box>
+    </>
   );
 };
 
