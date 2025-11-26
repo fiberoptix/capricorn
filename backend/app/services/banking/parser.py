@@ -15,7 +15,8 @@ from collections import defaultdict
 def create_master_file(base_dir=None):
     """Create the Master_Transactions.csv file with headers, starting fresh"""
     if base_dir is None:
-        base_dir = Path('/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data')
+        # Use path relative to this module - works in both DEV and PROD Docker
+        base_dir = Path(__file__).parent / "data"
     else:
         base_dir = Path(base_dir)
     
@@ -263,7 +264,8 @@ def parse_amex_credit_file(file_path, filename):
 def parse_classified_files(base_dir=None):
     """Parse all classified files from the working directory"""
     if base_dir is None:
-        base_dir = Path('/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data')
+        # Use path relative to this module - works in both DEV and PROD Docker
+        base_dir = Path(__file__).parent / "data"
     else:
         base_dir = Path(base_dir)
     
@@ -478,7 +480,8 @@ def main(base_dir=None):
     print("=" * 50)
     
     if base_dir is None:
-        base_dir = Path('/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data')
+        # Use path relative to this module - works in both DEV and PROD Docker
+        base_dir = Path(__file__).parent / "data"
     else:
         base_dir = Path(base_dir)
     

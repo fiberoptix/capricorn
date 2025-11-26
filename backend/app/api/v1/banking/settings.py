@@ -81,7 +81,8 @@ async def get_data_summary(
         # Count files
         file_count = 0
         file_details = {}
-        base_dir = Path("/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data")
+        # Use path relative to banking services module - works in both DEV and PROD Docker
+        base_dir = Path(__file__).parent.parent.parent.parent / "services" / "banking" / "data"
         
         for dir_name in ["input", "working", "output", "classified"]:
             dir_path = base_dir / dir_name

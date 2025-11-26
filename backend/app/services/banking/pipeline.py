@@ -45,7 +45,8 @@ class TransactionPipeline:
     
     def __init__(self):
         """Initialize the pipeline with default settings"""
-        self.base_dir = Path("/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/capricorn/backend/app/services/banking/data")
+        # Use path relative to this module - works in both DEV and PROD Docker
+        self.base_dir = Path(__file__).parent / "data"
         self.input_dir = self.base_dir / "input"
         self.classified_dir = self.base_dir / "classified"
         self.output_dir = self.base_dir / "output"
