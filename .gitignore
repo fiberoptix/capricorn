@@ -121,8 +121,12 @@ temp/
 !backend/market_data/TwelveData_Config.example.txt
 !.env.example
 
-# Test data exports
+# Test data exports (personal backups - don't commit)
 Capricorn_*.json
+
+# Demo data for new users (DO commit this!)
+!demo_UserData/
+!demo_UserData/*.json
 
 # Personal transaction data - NEVER commit these!
 backend/app/services/banking/data/input/*.csv

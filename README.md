@@ -91,7 +91,27 @@ docker-compose up -d --build
 # Then open http://localhost:5001 in your browser
 ```
 
-### First-Time Setup
+### 🎮 Try with Demo Data (Recommended for First-Time Users)
+
+Want to see all features in action right away? Import the included demo dataset:
+
+1. Navigate to http://localhost:5001
+2. Go to the **Data** tab
+3. Click **Import Data**
+4. Select `demo_UserData/Capricorn_DEMO_Data.json` from the repository
+5. All modules will populate with sample data for "Bob & Mary Smith"
+
+**Demo Data Includes:**
+- 23 months of realistic transactions (Jan 2024 - Nov 2025)
+- 3 investment portfolios (~$200K total)
+- Complete profile with retirement projections
+- Pre-configured tax settings (NY, Married Filing Jointly)
+
+This lets you explore all features without entering your own data first!
+
+---
+
+### First-Time Setup (Your Own Data)
 
 1. Navigate to http://localhost:5001
 2. Go to **Profile** tab and enter your financial information
