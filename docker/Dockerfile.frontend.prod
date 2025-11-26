@@ -1,0 +1,38 @@
+# Capricorn Frontend PROD Dockerfile
+# Multi-stage build: Build React app, serve with nginx
+# Build context: project root (capricorn/)
+
+# Stage 1: Build the React application
+FROM node:20.11.0-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files from frontend directory
+COPY frontend/package*.json ./
+
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy frontend source code
+COPY frontend/ .
+
+# Build the production bundle (skip tsc type-checking, use vite directly)
+RUN npx vite build
+
+# Stage 2: Serve with nginx
+FROM nginx:alpine
+
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy our nginx config
+COPY docker/nginx/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
