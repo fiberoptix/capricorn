@@ -79,6 +79,10 @@
 git clone https://github.com/fiberoptix/capricorn.git
 cd capricorn
 
+# (Optional) Set up TwelveData API for live stock prices
+cp backend/market_data/TwelveData_Config.example.txt backend/market_data/TwelveData_Config.txt
+# Edit the file and add your API key from https://twelvedata.com
+
 # Start all services
 cd docker
 docker-compose up -d --build
