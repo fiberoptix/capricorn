@@ -11,7 +11,7 @@ services:
       - "5001:5000"
     environment:
       - VITE_API_URL=http://localhost:5002
-      - VITE_BUILD_NUMBER=${BUILD_NUMBER:-1}
+      - VITE_BUILD_NUMBER=${BUILD_NUMBER:-DEV}
     volumes:
       - ../frontend:/app
       - /app/node_modules
