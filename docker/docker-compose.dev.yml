@@ -1,8 +1,11 @@
+# Capricorn DEV Docker Compose Configuration
+# Usage: docker-compose -f docker-compose.dev.yml up -d --build
+
 services:
   frontend:
     build:
       context: ../frontend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile.frontend
     container_name: capricorn-frontend
     ports:
       - "5001:5000"
@@ -19,7 +22,7 @@ services:
   backend:
     build:
       context: ../backend
-      dockerfile: Dockerfile
+      dockerfile: ../docker/Dockerfile.backend
     container_name: capricorn-backend
     ports:
       - "5002:8000"
@@ -62,3 +65,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
