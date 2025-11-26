@@ -28,7 +28,8 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Alert
+  Alert,
+  Link
 } from '@mui/material'
 import { 
   AttachMoney,
@@ -114,6 +115,25 @@ export function MarketPricesTab() {
   const [bulkPrices, setBulkPrices] = useState<Record<string, number>>({})
   const [refreshStatus, setRefreshStatus] = useState<RefreshStatus | null>(null)
   const statusPollRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // TwelveData API key configuration check
+  const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true) // Assume configured until checked
+  
+  useEffect(() => {
+    const checkApiKeyStatus = async () => {
+      try {
+        const response = await fetch(`${API_V1_URL}/settings/twelvedata-status`)
+        if (response.ok) {
+          const data = await response.json()
+          setApiKeyConfigured(data.is_configured)
+        }
+      } catch (error) {
+        // Fail silently - assume configured
+        console.error('Failed to check TwelveData API status:', error)
+      }
+    }
+    checkApiKeyStatus()
+  }, [])
 
   // Data hooks
   const { data: marketPrices, isLoading: loadingPrices, error: pricesError, refetch } = useMarketPrices()
@@ -563,6 +583,70 @@ export function MarketPricesTab() {
               data={marketPrices}
               columns={columns}
             />
+          ) : !apiKeyConfigured ? (
+            /* Helpful empty state when API key not configured */
+            <Paper sx={{ p: 4, textAlign: 'center', mt: 2, bgcolor: 'grey.50' }}>
+              <TrendingUp className="h-16 w-16 mx-auto mb-3" style={{ color: '#9e9e9e' }} />
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                No Live Prices Configured
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                You have three options for tracking stock prices:
+              </Typography>
+              
+              <Box sx={{ 
+                mt: 3, 
+                display: 'flex', 
+                gap: 2, 
+                justifyContent: 'center', 
+                flexDirection: 'column', 
+                maxWidth: 500, 
+                mx: 'auto',
+                textAlign: 'left'
+              }}>
+                <Paper sx={{ p: 2, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
+                    1. Set up TwelveData API (Free)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Get real-time prices automatically.{' '}
+                    <Link href="https://twelvedata.com/" target="_blank" sx={{ fontWeight: 'bold' }}>
+                      Sign up for free API key
+                    </Link>
+                    , then add it to <code>backend/market_data/TwelveData_Config.txt</code>
+                  </Typography>
+                </Paper>
+                
+                <Paper sx={{ p: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'success.dark' }}>
+                    2. Enter Prices Manually
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Add portfolio transactions first, then click "Bulk Update" to enter current market prices yourself.
+                  </Typography>
+                </Paper>
+                
+                <Paper sx={{ p: 2, bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'info.dark' }}>
+                    3. Use Cost Basis
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Portfolio values will use your purchase prices automatically. No setup needed!
+                  </Typography>
+                </Paper>
+              </Box>
+              
+              <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button 
+                  variant="contained"
+                  color="primary"
+                  href="https://github.com/fiberoptix/capricorn#twelvedata-api-optional---for-live-stock-prices" 
+                  target="_blank"
+                >
+                  Setup Instructions
+                </Button>
+              </Box>
+            </Paper>
           ) : (
             <Box sx={{ textAlign: 'center', py: 6 }}>
               <DollarSign className="h-16 w-16 mx-auto mb-4 text-gray-400" />
