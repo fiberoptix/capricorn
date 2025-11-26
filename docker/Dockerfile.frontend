@@ -1,3 +1,6 @@
+# Capricorn Frontend DEV Dockerfile
+# Vite dev server with hot reload
+
 FROM node:20.11.0-alpine
 
 WORKDIR /app
@@ -16,3 +19,4 @@ EXPOSE 5000
 
 # Start development server
 CMD ["npm", "run", "dev"]
+

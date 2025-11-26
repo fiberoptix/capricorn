@@ -12,7 +12,7 @@ echo ""
 
 # Tear down any existing containers (both DEV and PROD)
 echo "🧹 Cleaning up existing containers..."
-docker-compose down 2>/dev/null || true
+docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
 docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
 
 # Check for optional TwelveData config
@@ -40,4 +40,3 @@ echo "   🛑 Stop:  docker-compose -f docker-compose.prod.yml down"
 echo ""
 echo "🔒 PROD mode: Database and Redis are internal-only (not exposed)"
 echo ""
-
