@@ -79,10 +79,6 @@
 git clone https://github.com/fiberoptix/capricorn.git
 cd capricorn
 
-# Copy environment files
-cp .env.example .env
-cp backend/market_data/TwelveData_Config.example.txt backend/market_data/TwelveData_Config.txt
-
 # Start all services
 cd docker
 docker-compose up -d --build
@@ -122,21 +118,7 @@ This lets you explore all features without entering your own data first!
 
 ## ⚙️ Configuration
 
-### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-# Database
-POSTGRES_USER=capricorn
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=capricorn_db
-
-# Build
-BUILD_NUMBER=1
-```
-
-### TwelveData API (Optional)
+### TwelveData API (Optional - For Live Stock Prices)
 
 For real-time stock prices, get a free API key from [TwelveData](https://twelvedata.com/):
 
