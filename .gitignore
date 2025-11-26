@@ -1,0 +1,135 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+*.mo
+*.pot
+
+# =========================
+# Node / Frontend
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+frontend/dist/
+frontend/build/
+*.local
+
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.local
+.env.*.local
+*.env
+
+# API Keys - NEVER commit these!
+backend/market_data/TwelveData_Config.txt
+
+# =========================
+# Database
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+database/data/
+postgres_data/
+
+# =========================
+# IDE & Editors
+# =========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================
+# Docker
+# =========================
+docker/data/
+docker/logs/
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+log/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# =========================
+# Project-specific
+# =========================
+# Keep example files, ignore actual configs
+!backend/market_data/TwelveData_Config.example.txt
+!.env.example
+
+# Test data exports
+Capricorn_*.json
+
+# Personal transaction data - NEVER commit these!
+backend/app/services/banking/data/input/*.csv
+backend/app/services/banking/data/output/*.csv
+backend/app/services/banking/data/classified/*.csv
+backend/app/services/banking/data/working/*.csv
+
+# Old/backup directories
+frontend_old/
+backup/
