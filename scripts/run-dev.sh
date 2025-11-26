@@ -81,21 +81,25 @@ burn_and_build() {
     echo "=================================="
     echo ""
     
-    echo "🧹 Step 1/3: Stopping containers..."
+    echo "🧹 Step 1/4: Stopping containers..."
     docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
     docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
     
     echo ""
-    echo "🔨 Step 2/3: Rebuilding without cache..."
+    echo "🔨 Step 2/4: Rebuilding without cache..."
     docker-compose -f docker-compose.dev.yml build --no-cache
     
     echo ""
-    echo "🚀 Step 3/3: Starting fresh containers..."
+    echo "🚀 Step 3/4: Starting fresh containers..."
     docker-compose -f docker-compose.dev.yml up -d
     
     echo ""
     echo "⏳ Waiting for services to initialize..."
     sleep 5
+    
+    echo ""
+    echo "🧪 Step 4/4: Running QA tests..."
+    "$SCRIPT_DIR/qa-test.sh"
     
     echo ""
     echo "✅ Burn & Build complete!"

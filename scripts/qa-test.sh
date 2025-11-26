@@ -95,7 +95,7 @@ if [ $FAIL -eq 0 ]; then
   exit 0
 else
   echo "⚠️  Some tests failed. Check container logs:"
-  echo "  ./scripts/run-docker.sh logs"
+  echo "  docker-compose -f docker/docker-compose.dev.yml logs"
   exit 1
 fi
 
