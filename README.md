@@ -72,6 +72,17 @@
 - Docker & Docker Compose
 - Git
 
+### macOS Setup (Required for Mac Users)
+
+Docker Desktop on macOS requires explicit file sharing permission:
+
+1. Open **Docker Desktop** → **Settings** (gear icon)
+2. Go to **Resources** → **File Sharing**
+3. Click **+** and add the folder where you cloned Capricorn (e.g., `/Users/yourname/capricorn`)
+4. Click **Apply & Restart**
+
+Without this step, you'll see: *"Docker Desktop on MacOS requires explicit approval for file sharing"*
+
 ### Installation
 
 ```bash
