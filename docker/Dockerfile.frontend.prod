@@ -16,6 +16,9 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ .
 
+# Set build environment - PROD indicator
+ENV VITE_BUILD_NUMBER=PROD
+
 # Build the production bundle (skip tsc type-checking, use vite directly)
 RUN npx vite build
 

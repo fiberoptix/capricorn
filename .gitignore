@@ -137,3 +137,5 @@ backend/app/services/banking/data/working/*.csv
 # Old/backup directories
 frontend_old/
 backup/
+project/.env
+finance_manager/

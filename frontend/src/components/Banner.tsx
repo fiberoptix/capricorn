@@ -305,13 +305,11 @@ export const Banner: React.FC = () => {
   }, [realtimePricingEnabled, refreshMarketPrices]);
 
   useEffect(() => {
-    // Fetch build number from backend
-    fetch('/api/health')
-      .then(res => res.json())
-      .then(data => {
-        if (data.build_number) setBuildNumber(data.build_number);
-      })
-      .catch(() => {});
+    // Get build number from Vite env var (baked in at build time)
+    const envBuildNumber = import.meta.env.VITE_BUILD_NUMBER;
+    if (envBuildNumber) {
+      setBuildNumber(envBuildNumber);
+    }
 
     // Check Docker status
     fetch('/api/docker/status')
