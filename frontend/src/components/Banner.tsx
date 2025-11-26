@@ -368,24 +368,20 @@ export const Banner: React.FC = () => {
         }}
       >
       {/* Left: Logo & App Name */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Box
+          component="img"
+          src="/capricorn_icon.ico"
+          alt="Capricorn"
           sx={{
-            width: 60,
-            height: 60,
-            borderRadius: 2,
-            bgcolor: 'primary.main',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 'bold',
-            fontSize: 24,
-            color: 'white',
+            width: 96,
+            height: 96,
+            objectFit: 'contain',
+            mr: 1,
+            transform: 'scaleX(-1)',  // Flip horizontally
           }}
-        >
-          C
-        </Box>
-        <Box>
+        />
+        <Box sx={{ ml: '18px' }}>
           <Typography variant="h4" fontWeight="bold">
             Capricorn
           </Typography>
