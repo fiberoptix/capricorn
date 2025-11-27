@@ -30,8 +30,8 @@ REGION="us-east1"
 CLUSTER_NAME="capricorn-cluster"
 NAMESPACE="capricorn"
 
-# Service Account Key
-SERVICE_ACCOUNT_KEY="/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/finance_manager/cloud_deploy_google/voltaic-cirrus-476620-h5-af91c709f642.json"
+# Service Account Key (stored in capricorn/cloud/ - DO NOT commit to git)
+SERVICE_ACCOUNT_KEY="$CLOUD_DIR/gcp-service-account.json"
 
 show_help() {
     echo ""
