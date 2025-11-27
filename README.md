@@ -2,6 +2,9 @@
 
 **A unified personal finance platform for tracking investments, retirement planning, and financial analysis.**
 
+> ### 🌐 [**Try the Live Demo → capricorn.gothamtechnologies.com**](http://capricorn.gothamtechnologies.com)
+> *See it in action before you install!*
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker/docker-compose.yml)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](backend/requirements.txt)
