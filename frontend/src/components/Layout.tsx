@@ -45,11 +45,10 @@ export const Layout: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <Banner />
       
-      <Box sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 2 }}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
-          sx={{ px: 2, flex: 1 }}
         >
           {TABS.map((tab) => (
             <Tab key={tab} label={tab} />
@@ -65,6 +64,7 @@ export const Layout: React.FC = () => {
             alignItems: 'center',
             gap: 0.5,
             px: 2,
+            py: 1.5,
             color: 'primary.main',
             textDecoration: 'none',
             fontSize: '0.875rem',
