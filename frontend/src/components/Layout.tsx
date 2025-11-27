@@ -65,11 +65,12 @@ export const Layout: React.FC = () => {
             alignItems: 'center',
             gap: 0.5,
             px: 2,
-            color: 'text.secondary',
+            color: 'primary.main',
             textDecoration: 'none',
             fontSize: '0.875rem',
+            fontWeight: 500,
             '&:hover': {
-              color: 'primary.main',
+              color: 'primary.dark',
             },
           }}
         >
