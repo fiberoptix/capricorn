@@ -1,0 +1,20 @@
+# Capricorn PostgreSQL GCP Dockerfile
+# Custom postgres with SQL init scripts baked in
+# Build context: project root (capricorn/)
+
+FROM postgres:15.5-alpine
+
+# Copy init SQL scripts INTO the image
+# PostgreSQL automatically runs all .sql files in /docker-entrypoint-initdb.d/ on first boot
+COPY database/init/*.sql /docker-entrypoint-initdb.d/
+
+# Ensure scripts are readable
+RUN chmod 644 /docker-entrypoint-initdb.d/*.sql
+
+# Default environment (can be overridden in K8s manifest)
+ENV POSTGRES_USER=capricorn
+ENV POSTGRES_PASSWORD=capricorn2025
+ENV POSTGRES_DB=capricorn_db
+
+EXPOSE 5432
+
