@@ -3,7 +3,7 @@ User Profile Model
 Unified profile for Finance, Portfolio, and Retirement modules
 Single-user system (id=1 always)
 """
-from sqlalchemy import Column, Integer, String, Numeric, Boolean
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, DateTime
 from .base import Base, TimestampMixin
 
 class UserProfile(Base, TimestampMixin):
@@ -76,6 +76,7 @@ class UserProfile(Base, TimestampMixin):
     
     # Section 9: App Settings (shared across all clients)
     realtime_pricing_enabled = Column(Boolean, default=False)
+    live_pricing_enabled_at = Column(DateTime, nullable=True, default=None)  # For GCP 20-min auto-off
     
     def __repr__(self):
         return f"<UserProfile(id={self.id}, user='{self.user}', partner='{self.partner}')>"

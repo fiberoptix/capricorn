@@ -56,6 +56,11 @@ export const Banner: React.FC = () => {
   // TwelveData API key configuration state
   const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true); // Assume configured until we check
   const [showApiBanner, setShowApiBanner] = useState<boolean>(false);
+  
+  // GCP Demo Mode state
+  const [isGcpMode, setIsGcpMode] = useState<boolean>(false);
+  const [minutesRemaining, setMinutesRemaining] = useState<number | null>(null);
+  const gcpCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check TwelveData API key status and show banner if needed
   useEffect(() => {
@@ -103,6 +108,13 @@ export const Banner: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setRealtimePricingEnabled(data.enabled);
+          setIsGcpMode(data.is_gcp || false);
+          setMinutesRemaining(data.minutes_remaining);
+          
+          // If GCP mode and enabled, start polling for countdown
+          if (data.is_gcp && data.enabled) {
+            startGcpCountdownPolling();
+          }
         }
       } catch (error) {
         console.error('Failed to fetch realtime pricing setting:', error);
@@ -114,6 +126,13 @@ export const Banner: React.FC = () => {
     
     // Also check if there's an active refresh
     checkRefreshStatus();
+    
+    // Cleanup GCP polling on unmount
+    return () => {
+      if (gcpCheckRef.current) {
+        clearInterval(gcpCheckRef.current);
+      }
+    };
   }, []);
   
   // Function to check refresh status
@@ -258,6 +277,38 @@ export const Banner: React.FC = () => {
     };
   }, []);
 
+  // GCP Demo Mode: Poll every minute to update countdown and auto-disable
+  const startGcpCountdownPolling = useCallback(() => {
+    // Clear any existing poll
+    if (gcpCheckRef.current) {
+      clearInterval(gcpCheckRef.current);
+    }
+    
+    // Poll every minute
+    gcpCheckRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_V1_URL}/settings/realtime-pricing`);
+        if (response.ok) {
+          const data = await response.json();
+          setMinutesRemaining(data.minutes_remaining);
+          
+          // If backend auto-disabled, update UI
+          if (!data.enabled && realtimePricingEnabled) {
+            setRealtimePricingEnabled(false);
+            console.log('⏱️ GCP Demo Mode: Live pricing auto-disabled after 20 minutes');
+            // Stop polling
+            if (gcpCheckRef.current) {
+              clearInterval(gcpCheckRef.current);
+              gcpCheckRef.current = null;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check GCP countdown:', error);
+      }
+    }, 60000); // Every minute
+  }, [realtimePricingEnabled]);
+
   // Handle toggle change - save to backend database
   const handleToggle = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.checked;
@@ -265,11 +316,30 @@ export const Banner: React.FC = () => {
     
     // Save to backend (syncs across all clients)
     try {
-      await fetch(`${API_V1_URL}/settings/realtime-pricing?enabled=${newValue}`, {
+      const response = await fetch(`${API_V1_URL}/settings/realtime-pricing?enabled=${newValue}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
-      console.log(`🔧 Realtime pricing ${newValue ? 'enabled' : 'disabled'} (saved to database)`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`🔧 Realtime pricing ${newValue ? 'enabled' : 'disabled'} (saved to database)`);
+        
+        // Handle GCP mode
+        if (data.is_gcp) {
+          setIsGcpMode(true);
+          if (newValue && data.timeout_minutes) {
+            setMinutesRemaining(data.timeout_minutes);
+            startGcpCountdownPolling();
+          } else {
+            setMinutesRemaining(null);
+            if (gcpCheckRef.current) {
+              clearInterval(gcpCheckRef.current);
+              gcpCheckRef.current = null;
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to save realtime pricing setting:', error);
     }
@@ -278,7 +348,7 @@ export const Banner: React.FC = () => {
       // When turning ON, do an immediate refresh
       refreshMarketPrices(true);
     }
-  }, [refreshMarketPrices]);
+  }, [refreshMarketPrices, startGcpCountdownPolling]);
 
   // Set up interval when enabled
   useEffect(() => {
@@ -395,8 +465,12 @@ export const Banner: React.FC = () => {
         <Tooltip 
           title={
             realtimePricingEnabled 
-              ? `Auto-refreshing prices every 15 min during market hours${lastRefresh ? ` (Last: ${lastRefresh})` : ''}`
-              : 'Click to enable automatic price updates'
+              ? (isGcpMode && minutesRemaining !== null
+                  ? `Demo mode: auto-disables in ${minutesRemaining} min${lastRefresh ? ` (Last: ${lastRefresh})` : ''}`
+                  : `Auto-refreshing prices every 15 min during market hours${lastRefresh ? ` (Last: ${lastRefresh})` : ''}`)
+              : (isGcpMode 
+                  ? 'Demo mode: Live pricing resets after 20 minutes'
+                  : 'Click to enable automatic price updates')
           }
         >
           <Box 
@@ -433,7 +507,11 @@ export const Banner: React.FC = () => {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {realtimePricingEnabled ? 'Live Prices: ON' : 'Live Prices: OFF'}
+                {realtimePricingEnabled 
+                  ? (isGcpMode && minutesRemaining !== null 
+                      ? `Live: ON (${minutesRemaining}m)` 
+                      : 'Live Prices: ON')
+                  : 'Live Prices: OFF'}
               </Typography>
               {/* Warning icon when API key not configured */}
               {!apiKeyConfigured && (
