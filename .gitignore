@@ -139,3 +139,8 @@ frontend_old/
 backup/
 project/.env
 finance_manager/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
