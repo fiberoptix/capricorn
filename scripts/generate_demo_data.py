@@ -4,18 +4,21 @@ Generate Demo Data for Capricorn
 Creates a sanitized demo dataset based on the real export file structure.
 
 Usage: python generate_demo_data.py
-Output: saved_states/Capricorn_DEMO_Data.json
+Output: ../demo_UserData/Capricorn_DEMO_Data.json
 """
 
 import json
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 import copy
 
-# Configuration
-INPUT_FILE = "/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/saved_states/Capricorn_UserData_2025-11-25_1028.json"
-OUTPUT_FILE = "/mnt/hgfs/VM_SHARE/Cursor_Projects/unified_ui/saved_states/Capricorn_DEMO_Data.json"
+# Configuration - Use relative paths for portability
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+INPUT_FILE = PROJECT_ROOT.parent / "saved_states" / "Capricorn_UserData_2025-11-25_1028.json"
+OUTPUT_FILE = PROJECT_ROOT / "demo_UserData" / "Capricorn_DEMO_Data.json"
 
 # Categories to EXCLUDE (by name)
 EXCLUDED_CATEGORIES = [
