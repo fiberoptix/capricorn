@@ -15,6 +15,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER_DIR="$(dirname "$SCRIPT_DIR")/docker"
 ACTION=${1:-start}
 
+# Detect Docker Compose version (V1 vs V2)
+if docker compose version &>/dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif docker-compose version &>/dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo "❌ Neither 'docker compose' nor 'docker-compose' found"
+    exit 1
+fi
+
 cd "$DOCKER_DIR"
 
 show_help() {
@@ -35,7 +45,7 @@ show_help() {
 
 stop_containers() {
     echo "🛑 Stopping Capricorn DEV containers..."
-    docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.dev.yml down 2>/dev/null || true
     echo "✅ DEV containers stopped"
 }
 
@@ -46,10 +56,10 @@ start_containers() {
     echo ""
     
     # Stop PROD if running (to free ports)
-    docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.prod.yml down 2>/dev/null || true
     
     echo "🔨 Building and starting DEV environment..."
-    docker-compose -f docker-compose.dev.yml up -d --build
+    $DOCKER_COMPOSE -f docker-compose.dev.yml up -d --build
     
     echo ""
     echo "⏳ Waiting for services to initialize..."
@@ -64,14 +74,14 @@ start_containers() {
     echo "   Database:  localhost:5003"
     echo "   Redis:     localhost:5004"
     echo ""
-    echo "📋 Logs:  docker-compose -f docker-compose.dev.yml logs -f"
+    echo "📋 Logs:  $DOCKER_COMPOSE -f docker-compose.dev.yml logs -f"
     echo "🛑 Stop:  ./scripts/run-dev.sh stop"
     echo ""
 }
 
 restart_containers() {
     echo "🔄 Restarting Capricorn DEV containers..."
-    docker-compose -f docker-compose.dev.yml restart
+    $DOCKER_COMPOSE -f docker-compose.dev.yml restart
     echo "✅ DEV containers restarted"
 }
 
@@ -82,16 +92,16 @@ burn_and_build() {
     echo ""
     
     echo "🧹 Step 1/4: Stopping containers..."
-    docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
-    docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.dev.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.prod.yml down 2>/dev/null || true
     
     echo ""
     echo "🔨 Step 2/4: Rebuilding without cache..."
-    docker-compose -f docker-compose.dev.yml build --no-cache
+    $DOCKER_COMPOSE -f docker-compose.dev.yml build --no-cache
     
     echo ""
     echo "🚀 Step 3/4: Starting fresh containers..."
-    docker-compose -f docker-compose.dev.yml up -d
+    $DOCKER_COMPOSE -f docker-compose.dev.yml up -d
     
     echo ""
     echo "⏳ Waiting for services to initialize..."
@@ -130,8 +140,8 @@ nuke_everything() {
     
     echo ""
     echo "🧹 Step 1/4: Stopping all containers..."
-    docker-compose -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
-    docker-compose -f docker-compose.prod.yml down -v --remove-orphans 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.prod.yml down -v --remove-orphans 2>/dev/null || true
     
     echo ""
     echo "🗑️  Step 2/4: Removing Capricorn images..."
