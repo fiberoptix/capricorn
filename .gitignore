@@ -139,3 +139,14 @@ frontend_old/
 backup/
 project/.env
 finance_manager/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# GCP Service Account Key - NEVER COMMIT
+cloud/gcp-service-account.json
+
+# AWS Credentials - NEVER COMMIT
+cloud/.aws/
