@@ -136,19 +136,15 @@ build_images() {
         --push \
         . 2>&1 | tail -5
     
-    # Get backend IP if available, otherwise use placeholder
-    BACKEND_IP=$(kubectl get svc backend -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
-    if [ -n "$BACKEND_IP" ]; then
-        BACKEND_URL="http://${BACKEND_IP}:5002"
-    else
-        BACKEND_URL="http://localhost:5002"
-    fi
+    # With Ingress, frontend uses same domain as page (no separate backend URL needed)
+    # Ingress routes /api/* to backend, frontend gets same domain
+    FRONTEND_URL="http://localhost"  # Placeholder, will rebuild after Ingress IP is available
     
-    echo "  [3/3] Building frontend (API URL: $BACKEND_URL)..."
+    echo "  [3/3] Building frontend (API URL: $FRONTEND_URL - will rebuild with Ingress URL)..."
     docker buildx build \
         --platform linux/amd64 \
         -f docker/Dockerfile.frontend.gcp \
-        --build-arg VITE_API_URL="$BACKEND_URL" \
+        --build-arg VITE_API_URL="$FRONTEND_URL" \
         --build-arg VITE_BUILD_NUMBER="GCP" \
         -t gcr.io/$PROJECT_ID/capricorn-frontend:latest \
         --push \
@@ -208,31 +204,35 @@ deploy_k8s() {
     echo "  Waiting for frontend..."
     kubectl wait --for=condition=ready pod -l app=frontend -n $NAMESPACE --timeout=120s 2>/dev/null || true
     
+    echo "  Deploying ingress (single entry point)..."
+    kubectl apply -f ingress.yaml 2>/dev/null
+    
     echo "  ✅ All services deployed"
 }
 
 # Get and display URLs
 show_urls() {
     echo ""
-    echo "🌐 Getting external URLs..."
+    echo "🌐 Getting Ingress URL..."
     
     for i in {1..30}; do
-        FRONTEND_IP=$(kubectl get svc frontend -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
-        BACKEND_IP=$(kubectl get svc backend -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+        INGRESS_IP=$(kubectl get ingress capricorn-ingress -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
         
-        if [ -n "$FRONTEND_IP" ] && [ -n "$BACKEND_IP" ]; then
+        if [ -n "$INGRESS_IP" ]; then
             break
         fi
-        echo "  Waiting for LoadBalancer IPs... ($i/30)"
+        echo "  Waiting for Ingress IP... ($i/30)"
         sleep 10
     done
     
     echo ""
     echo "✅ GCP environment running!"
     echo ""
-    echo "   Frontend:  http://$FRONTEND_IP"
-    echo "   Backend:   http://$BACKEND_IP:5002"
-    echo "   Health:    http://$BACKEND_IP:5002/health"
+    echo "   URL:       http://$INGRESS_IP"
+    echo "   Frontend:  http://$INGRESS_IP/"
+    echo "   Backend:   http://$INGRESS_IP/api/ (via Ingress routing)"
+    echo ""
+    echo "💡 Update Route53 CNAME to point to: $INGRESS_IP"
     echo ""
     echo "📋 Logs:   ./scripts/run-gcp.sh logs"
     echo "📊 Status: ./scripts/run-gcp.sh status"
@@ -290,28 +290,28 @@ start_containers() {
     configure_kubectl
     deploy_k8s
     
-    # Fix frontend with actual backend URL (wait for LoadBalancer IP)
+    # Rebuild frontend with Ingress URL (wait for Ingress IP)
     echo ""
-    echo "🔧 Waiting for backend LoadBalancer IP..."
-    BACKEND_IP=""
+    echo "🔧 Waiting for Ingress IP..."
+    INGRESS_IP=""
     for i in {1..30}; do
-        BACKEND_IP=$(kubectl get svc backend -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
-        if [ -n "$BACKEND_IP" ]; then
+        INGRESS_IP=$(kubectl get ingress capricorn-ingress -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+        if [ -n "$INGRESS_IP" ]; then
             break
         fi
-        echo "  Waiting for backend IP... ($i/30)"
+        echo "  Waiting for Ingress IP... ($i/30)"
         sleep 10
     done
     
-    if [ -n "$BACKEND_IP" ]; then
+    if [ -n "$INGRESS_IP" ]; then
         echo ""
-        echo "🔧 Rebuilding frontend with backend URL: http://${BACKEND_IP}:5002..."
-        BACKEND_URL="http://${BACKEND_IP}:5002"
+        echo "🔧 Rebuilding frontend with Ingress URL: http://${INGRESS_IP}..."
+        FRONTEND_URL="http://${INGRESS_IP}"
         cd "$PROJECT_ROOT"
         docker buildx build \
             --platform linux/amd64 \
             -f docker/Dockerfile.frontend.gcp \
-            --build-arg VITE_API_URL="$BACKEND_URL" \
+            --build-arg VITE_API_URL="$FRONTEND_URL" \
             --build-arg VITE_BUILD_NUMBER="GCP" \
             -t gcr.io/$PROJECT_ID/capricorn-frontend:latest \
             --push \
@@ -320,9 +320,9 @@ start_containers() {
         echo "  🔄 Restarting frontend deployment..."
         kubectl rollout restart deployment/frontend -n $NAMESPACE 2>/dev/null
         kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=120s 2>/dev/null || true
-        echo "  ✅ Frontend rebuilt with correct backend URL"
+        echo "  ✅ Frontend rebuilt with Ingress URL"
     else
-        echo "  ⚠️  Backend IP not available yet - run './scripts/run-gcp.sh fix-fe' manually"
+        echo "  ⚠️  Ingress IP not available yet"
     fi
     
     show_urls
@@ -408,7 +408,7 @@ burn_and_build() {
         --platform linux/amd64 \
         --no-cache \
         -f docker/Dockerfile.frontend.gcp \
-        --build-arg VITE_API_URL="http://localhost:5002" \
+        --build-arg VITE_API_URL="http://localhost" \
         --build-arg VITE_BUILD_NUMBER="GCP" \
         -t gcr.io/$PROJECT_ID/capricorn-frontend:latest \
         --push \
@@ -418,28 +418,28 @@ burn_and_build() {
     echo "🚀 Step 3/4: Deploying fresh..."
     deploy_k8s
     
-    # Fix frontend URL (wait for LoadBalancer IP)
+    # Rebuild frontend with Ingress URL (wait for Ingress IP)
     echo ""
-    echo "🔧 Waiting for backend LoadBalancer IP..."
-    BACKEND_IP=""
+    echo "🔧 Waiting for Ingress IP..."
+    INGRESS_IP=""
     for i in {1..30}; do
-        BACKEND_IP=$(kubectl get svc backend -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
-        if [ -n "$BACKEND_IP" ]; then
+        INGRESS_IP=$(kubectl get ingress capricorn-ingress -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+        if [ -n "$INGRESS_IP" ]; then
             break
         fi
-        echo "  Waiting for backend IP... ($i/30)"
+        echo "  Waiting for Ingress IP... ($i/30)"
         sleep 10
     done
     
-    if [ -n "$BACKEND_IP" ]; then
+    if [ -n "$INGRESS_IP" ]; then
         echo ""
-        echo "🔧 Rebuilding frontend with backend URL: http://${BACKEND_IP}:5002..."
-        BACKEND_URL="http://${BACKEND_IP}:5002"
+        echo "🔧 Rebuilding frontend with Ingress URL: http://${INGRESS_IP}..."
+        FRONTEND_URL="http://${INGRESS_IP}"
         cd "$PROJECT_ROOT"
         docker buildx build \
             --platform linux/amd64 \
             -f docker/Dockerfile.frontend.gcp \
-            --build-arg VITE_API_URL="$BACKEND_URL" \
+            --build-arg VITE_API_URL="$FRONTEND_URL" \
             --build-arg VITE_BUILD_NUMBER="GCP" \
             -t gcr.io/$PROJECT_ID/capricorn-frontend:latest \
             --push \
@@ -448,9 +448,9 @@ burn_and_build() {
         echo "  🔄 Restarting frontend deployment..."
         kubectl rollout restart deployment/frontend -n $NAMESPACE 2>/dev/null
         kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=120s 2>/dev/null || true
-        echo "  ✅ Frontend rebuilt with correct backend URL"
+        echo "  ✅ Frontend rebuilt with Ingress URL"
     else
-        echo "  ⚠️  Backend IP not available yet - run './scripts/run-gcp.sh fix-fe' manually"
+        echo "  ⚠️  Ingress IP not available yet"
     fi
     
     echo ""

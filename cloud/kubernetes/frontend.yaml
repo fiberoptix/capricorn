@@ -40,7 +40,7 @@ metadata:
   name: frontend
   namespace: capricorn
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: frontend
   ports:

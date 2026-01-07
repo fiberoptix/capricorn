@@ -53,7 +53,7 @@ metadata:
   name: backend
   namespace: capricorn
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: backend
   ports:
