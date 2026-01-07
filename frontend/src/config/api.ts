@@ -1,33 +1,37 @@
 /**
  * Central API Configuration
  * 
- * Dynamically determines the API base URL based on where the browser
- * loaded the page from. This allows the app to work from any machine:
- * - localhost (development)
- * - 192.168.x.x (LAN IP)
- * - hostname (server name)
- * - domain.com (production)
+ * Priority:
+ * 1. VITE_API_URL environment variable (for cloud deployments like GKE)
+ * 2. Same hostname as the page (for local dev/prod where FE & BE share host)
  * 
- * The browser knows what hostname it used to reach the frontend,
- * so we use that same hostname for API calls (just different port).
+ * In GKE, frontend and backend have different LoadBalancer IPs,
+ * so we must set VITE_API_URL at build time.
  */
 
-// Get the hostname the browser used to load this page
-const getApiHost = (): string => {
-  // In browser environment, use the same hostname that served the page
-  if (typeof window !== 'undefined') {
-    return window.location.hostname;
+// Check for build-time API URL (used in GCP/cloud deployments)
+const getApiBaseUrl = (): string => {
+  // Priority 1: Build-time environment variable
+  const envApiUrl = import.meta.env.VITE_API_URL;
+  if (envApiUrl) {
+    console.log('🌐 Using build-time API URL:', envApiUrl);
+    return envApiUrl;
   }
-  // Fallback for SSR or non-browser environments
-  return 'localhost';
+  
+  // Priority 2: Same hostname as the page (local deployments)
+  if (typeof window !== 'undefined') {
+    const dynamicUrl = `http://${window.location.hostname}:5002`;
+    console.log('🏠 Using dynamic API URL:', dynamicUrl);
+    return dynamicUrl;
+  }
+  
+  // Fallback
+  return 'http://localhost:5002';
 };
 
-// API port (backend runs on 5002)
-const API_PORT = 5002;
-
-// Build the full API base URL dynamically
-export const API_HOST = getApiHost();
-export const API_BASE_URL = `http://${API_HOST}:${API_PORT}`;
+// Build the full API base URL
+export const API_BASE_URL = getApiBaseUrl();
+export const API_HOST = new URL(API_BASE_URL).hostname;
 export const API_V1_URL = `${API_BASE_URL}/api/v1`;
 
 // Convenience exports for different API sections

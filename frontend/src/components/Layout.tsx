@@ -8,8 +8,9 @@ import { PortfolioModule } from '../modules/portfolio';
 import { ProfileModule } from '../modules/profile';
 import { RetirementModule } from '../modules/retirement';
 import { DataModule } from '../modules/data';
+import { HelpModule } from '../modules/help';
 
-const TABS = ['Dashboard', 'Finance', 'Taxes', 'Portfolio', 'Retirement', 'Profile', 'Data'];
+const TABS = ['Dashboard', 'Finance', 'Taxes', 'Portfolio', 'Retirement', 'Profile', 'Data', 'Help'];
 
 export const Layout: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -34,6 +35,8 @@ export const Layout: React.FC = () => {
         return <ProfileModule />;
       case 6:
         return <DataModule />;
+      case 7:
+        return <HelpModule />;
       default:
         return <Dashboard />;
     }

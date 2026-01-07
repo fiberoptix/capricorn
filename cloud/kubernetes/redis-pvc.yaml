@@ -1,0 +1,16 @@
+# Redis Persistent Volume Claim
+# This creates a real persistent disk in GCP that survives pod restarts
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: capricorn
+spec:
+  accessModes:
+    - ReadWriteOnce  # Single pod can read/write
+  resources:
+    requests:
+      storage: 1Gi  # 1GB persistent disk (Redis cache)
+  storageClassName: standard-rwo  # GKE Autopilot default storage class
+

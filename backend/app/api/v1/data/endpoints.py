@@ -8,8 +8,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, text
 from datetime import datetime
+from pathlib import Path
 import json
 import io
+import logging
 
 from app.core.database import get_async_db
 from app.models.transaction import Transaction
@@ -19,101 +21,256 @@ from app.models.user_profile import UserProfile
 from app.models.portfolio_models import Portfolio, PortfolioTransaction, MarketPrice, InvestorProfile
 
 router = APIRouter(prefix="/data", tags=["data"])
+logger = logging.getLogger(__name__)
+
+
+async def load_demo_data_from_file() -> dict:
+    """
+    Load demo data from the bundled JSON file.
+    Returns the parsed JSON data structure.
+    """
+    # Find demo data file (relative to this module)
+    # This file is at: /app/backend/app/api/v1/data/endpoints.py
+    # Demo file is at: /app/demo_UserData/Capricorn_DEMO_Data.json
+    # Need to go up 6 levels: data/ -> v1/ -> api/ -> app/ -> backend/ -> /app/
+    demo_file = Path(__file__).parent.parent.parent.parent.parent.parent / "demo_UserData" / "Capricorn_DEMO_Data.json"
+    
+    if not demo_file.exists():
+        raise FileNotFoundError(f"Demo data file not found: {demo_file}")
+    
+    logger.info(f"Loading demo data from: {demo_file}")
+    with open(demo_file, 'r') as f:
+        return json.load(f)
+
+
+async def import_demo_data_internal(db: AsyncSession, demo_data: dict) -> dict:
+    """
+    Import demo data from a data structure (reuses import logic).
+    Used for both bootstrap and clear operations.
+    """
+    data = demo_data["data"]
+    imported_counts = {}
+    
+    # Import user_profile
+    for item in data.get("user_profile", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(UserProfile(**clean_item))
+    imported_counts["user_profile"] = len(data.get("user_profile", []))
+    
+    # Import investor_profiles
+    for item in data.get("investor_profiles", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(InvestorProfile(**clean_item))
+    imported_counts["investor_profiles"] = len(data.get("investor_profiles", []))
+    
+    # Import accounts
+    for item in data.get("accounts", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(Account(**clean_item))
+    imported_counts["accounts"] = len(data.get("accounts", []))
+    
+    # Import categories
+    for item in data.get("categories", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(Category(**clean_item))
+    imported_counts["categories"] = len(data.get("categories", []))
+    
+    # Import portfolios
+    for item in data.get("portfolios", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(Portfolio(**clean_item))
+    imported_counts["portfolios"] = len(data.get("portfolios", []))
+    
+    # Import market_prices
+    for item in data.get("market_prices", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at', 'last_updated']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+        db.add(MarketPrice(**clean_item))
+    imported_counts["market_prices"] = len(data.get("market_prices", []))
+    
+    # Commit base tables
+    await db.commit()
+    
+    # Import transactions (depends on accounts, categories)
+    for item in data.get("transactions", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at', 'transaction_date']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                if 'T' in clean_item[date_field]:
+                    clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+                else:
+                    from datetime import date
+                    clean_item[date_field] = datetime.strptime(clean_item[date_field], '%Y-%m-%d').date()
+        db.add(Transaction(**clean_item))
+    imported_counts["transactions"] = len(data.get("transactions", []))
+    
+    # Import portfolio_transactions (depends on portfolios)
+    for item in data.get("portfolio_transactions", []):
+        clean_item = {k: v for k, v in item.items() if v is not None or k == 'id'}
+        for date_field in ['created_at', 'updated_at', 'transaction_date']:
+            if date_field in clean_item and isinstance(clean_item[date_field], str):
+                if 'T' in clean_item[date_field]:
+                    clean_item[date_field] = datetime.fromisoformat(clean_item[date_field].replace('Z', '+00:00'))
+                else:
+                    from datetime import date
+                    clean_item[date_field] = datetime.strptime(clean_item[date_field], '%Y-%m-%d').date()
+        db.add(PortfolioTransaction(**clean_item))
+    imported_counts["portfolio_transactions"] = len(data.get("portfolio_transactions", []))
+    
+    await db.commit()
+    
+    # Reset sequences
+    tables_with_sequences = [
+        'user_profile', 'accounts', 'categories', 'transactions',
+        'portfolios', 'portfolio_transactions', 'market_prices', 'investor_profiles'
+    ]
+    
+    for table in tables_with_sequences:
+        try:
+            await db.execute(text(
+                f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "
+                f"COALESCE((SELECT MAX(id) FROM {table}), 1))"
+            ))
+        except Exception:
+            pass
+    
+    await db.commit()
+    imported_counts["total"] = sum(imported_counts.values())
+    
+    return imported_counts
+
+
+async def create_minimal_bootstrap_user(db: AsyncSession) -> dict:
+    """
+    Fallback: Create minimal bootstrap user if demo data file is not available.
+    This is the old bootstrap logic, kept as a safety fallback.
+    """
+    created = {}
+    
+    # Create minimal UserProfile
+    profile = UserProfile(
+        id=1,
+        email="user@capricorn.local",
+        first_name="Capricorn",
+        last_name="User",
+        user="User",
+        partner="Partner",
+        user_age=30,
+        partner_age=30,
+        years_of_retirement=30,
+        user_years_to_retirement=35,
+        partner_years_to_retirement=35,
+        user_salary=100000.00,
+        partner_salary=0.00,
+        user_bonus_rate=0.05,
+        user_raise_rate=0.05,
+        partner_bonus_rate=0.05,
+        partner_raise_rate=0.05,
+        monthly_living_expenses=5000.00,
+        annual_discretionary_spending=10000.00,
+        annual_inflation_rate=0.04,
+        user_401k_contribution=24000.00,
+        partner_401k_contribution=0.00,
+        user_employer_match=5000.00,
+        partner_employer_match=0.00,
+        user_current_401k_balance=100000.00,
+        partner_current_401k_balance=0.00,
+        user_401k_growth_rate=0.10,
+        partner_401k_growth_rate=0.10,
+        current_ira_balance=0.00,
+        ira_return_rate=0.10,
+        current_trading_balance=0.00,
+        trading_return_rate=0.10,
+        current_savings_balance=0.00,
+        savings_return_rate=0.00,
+        expected_inheritance=0.00,
+        inheritance_year=20,
+        state="NY",
+        local_tax_rate=0.01,
+        filing_status="single",
+        retirement_growth_rate=0.05,
+        withdrawal_rate=0.04,
+        fixed_monthly_savings=1000.00,
+        percentage_of_leftover=0.50,
+        savings_destination="trading"
+    )
+    db.add(profile)
+    created["user_profile"] = 1
+    
+    # Create minimal InvestorProfile
+    investor = InvestorProfile(
+        id=1,
+        name="Default Investor",
+        annual_household_income=100000.00,
+        filing_status="single",
+        state_of_residence="NY",
+        local_tax_rate=0.01
+    )
+    db.add(investor)
+    created["investor_profile"] = 1
+    
+    await db.commit()
+    
+    # Reset sequences
+    for table in ['user_profile', 'investor_profiles']:
+        try:
+            await db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), 1, true)"))
+        except Exception:
+            pass
+    
+    await db.commit()
+    return created
 
 
 async def create_bootstrap_user(db: AsyncSession) -> dict:
     """
-    Create minimal seed data to make the app functional.
+    Create bootstrap data using Demo dataset.
     Called on startup if database is empty, and after clearing all data.
-    Returns dict with what was created.
-    """
-    created = {}
     
+    Loads the complete demo dataset (Bob & Mary Smith, 559 transactions, 3 portfolios)
+    from Capricorn_DEMO_Data.json instead of minimal bootstrap user.
+    
+    Returns dict with import counts.
+    """
     # Check if UserProfile exists
     result = await db.execute(select(UserProfile).where(UserProfile.id == 1))
     existing_profile = result.scalar_one_or_none()
     
-    if not existing_profile:
-        # Create minimal UserProfile with sensible defaults for a single person
-        # All partner values explicitly set to 0 (not None) for single-person use
-        profile = UserProfile(
-            id=1,
-            email="user@capricorn.local",
-            first_name="Capricorn",
-            last_name="User",
-            user="User",
-            partner="Partner",
-            user_age=30,
-            partner_age=30,
-            years_of_retirement=30,
-            user_years_to_retirement=35,
-            partner_years_to_retirement=35,
-            user_salary=100000.00,
-            partner_salary=0.00,  # Single person - no partner income
-            user_bonus_rate=0.05,
-            user_raise_rate=0.05,
-            partner_bonus_rate=0.05,
-            partner_raise_rate=0.05,
-            monthly_living_expenses=5000.00,
-            annual_discretionary_spending=10000.00,
-            annual_inflation_rate=0.04,
-            user_401k_contribution=24000.00,
-            partner_401k_contribution=0.00,
-            user_employer_match=5000.00,
-            partner_employer_match=0.00,
-            user_current_401k_balance=100000.00,
-            partner_current_401k_balance=0.00,
-            user_401k_growth_rate=0.10,
-            partner_401k_growth_rate=0.10,
-            current_ira_balance=0.00,
-            ira_return_rate=0.10,
-            current_trading_balance=0.00,
-            trading_return_rate=0.10,
-            current_savings_balance=0.00,
-            savings_return_rate=0.00,
-            expected_inheritance=0.00,
-            inheritance_year=20,
-            state="NY",
-            local_tax_rate=0.01,
-            filing_status="single",
-            retirement_growth_rate=0.05,
-            withdrawal_rate=0.04,
-            fixed_monthly_savings=1000.00,
-            percentage_of_leftover=0.50,
-            savings_destination="trading"
-        )
-        db.add(profile)
-        created["user_profile"] = 1
+    if existing_profile:
+        # Data already exists, don't overwrite
+        return {}
     
-    # Check if InvestorProfile exists
-    result = await db.execute(select(InvestorProfile).where(InvestorProfile.id == 1))
-    existing_investor = result.scalar_one_or_none()
-    
-    if not existing_investor:
-        # Create minimal InvestorProfile (matches UserProfile defaults)
-        investor = InvestorProfile(
-            id=1,
-            name="Default Investor",
-            annual_household_income=100000.00,
-            filing_status="single",
-            state_of_residence="NY",
-            local_tax_rate=0.01
-        )
-        db.add(investor)
-        created["investor_profile"] = 1
-    
-    if created:
-        await db.commit()
-        
-        # Reset sequences to start after id 1
-        for table in ['user_profile', 'investor_profiles']:
-            try:
-                await db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), 1, true)"))
-            except Exception:
-                pass
-        await db.commit()
-    
-    return created
+    # Load and import demo data
+    try:
+        logger.info("Loading Capricorn_DEMO_Data.json for bootstrap...")
+        demo_data = await load_demo_data_from_file()
+        imported_counts = await import_demo_data_internal(db, demo_data)
+        logger.info(f"Demo data imported: {imported_counts}")
+        return imported_counts
+    except FileNotFoundError as e:
+        # Fallback to minimal bootstrap if demo file not found
+        logger.warning(f"Demo data file not found, using minimal bootstrap: {e}")
+        return await create_minimal_bootstrap_user(db)
+    except Exception as e:
+        logger.error(f"Failed to import demo data, using minimal bootstrap: {e}")
+        return await create_minimal_bootstrap_user(db)
 
 
 async def ensure_bootstrap_user(db: AsyncSession) -> dict:
@@ -141,15 +298,16 @@ def model_to_dict(obj):
 @router.get("/bootstrap")
 async def bootstrap_user(db: AsyncSession = Depends(get_async_db)):
     """
-    Ensure minimal user data exists for app to function.
+    Ensure demo data exists for app to function.
     Safe to call multiple times - only creates if missing.
+    Loads Capricorn_DEMO_Data.json (complete demo dataset with transactions, portfolios, accounts).
     """
     created = await ensure_bootstrap_user(db)
     
     if created:
         return {
             "success": True,
-            "message": "Bootstrap user created",
+            "message": "Demo data imported from Capricorn_DEMO_Data.json",
             "created": created
         }
     else:
@@ -466,12 +624,12 @@ async def clear_all_data(db: AsyncSession = Depends(get_async_db)):
         
         deleted_counts["total"] = sum(deleted_counts.values())
         
-        # Create bootstrap user so app continues to function
+        # Load demo data so app continues to function with realistic data
         bootstrap_created = await create_bootstrap_user(db)
         
         return {
             "success": True,
-            "message": "All user data has been cleared. Bootstrap user created.",
+            "message": "All user data has been cleared. Demo data has been reloaded from Capricorn_DEMO_Data.json.",
             "deleted": deleted_counts,
             "bootstrap_created": bootstrap_created
         }

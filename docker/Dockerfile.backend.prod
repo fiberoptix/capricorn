@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY backend/ .
 
+# Copy demo data for bootstrap
+COPY demo_UserData/ /app/demo_UserData/
+
 # Create non-root user for security
 RUN useradd -m -u 1000 capricorn && chown -R capricorn:capricorn /app
 USER capricorn

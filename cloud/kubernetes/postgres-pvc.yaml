@@ -1,0 +1,16 @@
+# PostgreSQL Persistent Volume Claim
+# This creates a real persistent disk in GCP that survives pod restarts
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: capricorn
+spec:
+  accessModes:
+    - ReadWriteOnce  # Single pod can read/write
+  resources:
+    requests:
+      storage: 10Gi  # 10GB persistent disk
+  storageClassName: standard-rwo  # GKE Autopilot default storage class
+
