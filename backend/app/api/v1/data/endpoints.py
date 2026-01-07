@@ -29,11 +29,9 @@ async def load_demo_data_from_file() -> dict:
     Load demo data from the bundled JSON file.
     Returns the parsed JSON data structure.
     """
-    # Find demo data file (relative to this module)
-    # This file is at: /app/backend/app/api/v1/data/endpoints.py
-    # Demo file is at: /app/demo_UserData/Capricorn_DEMO_Data.json
-    # Need to go up 6 levels: data/ -> v1/ -> api/ -> app/ -> backend/ -> /app/
-    demo_file = Path(__file__).parent.parent.parent.parent.parent.parent / "demo_UserData" / "Capricorn_DEMO_Data.json"
+    # Demo data file location in Docker container
+    # All our Dockerfiles set WORKDIR /app, so demo file is at /app/demo_UserData/
+    demo_file = Path("/app/demo_UserData/Capricorn_DEMO_Data.json")
     
     if not demo_file.exists():
         raise FileNotFoundError(f"Demo data file not found: {demo_file}")
