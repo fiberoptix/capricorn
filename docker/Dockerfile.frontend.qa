@@ -1,4 +1,4 @@
-# Capricorn Frontend PROD Dockerfile
+# Capricorn Frontend QA Dockerfile
 # Multi-stage build: Build React app, serve with nginx
 # Build context: project root (capricorn/)
 
@@ -16,8 +16,8 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ .
 
-# Set build environment - PROD indicator
-ENV VITE_BUILD_NUMBER=PROD
+# Set build environment - QA indicator
+ENV VITE_BUILD_NUMBER=QA
 
 # Build the production bundle (skip tsc type-checking, use vite directly)
 RUN npx vite build
