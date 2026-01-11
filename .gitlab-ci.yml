@@ -1,0 +1,148 @@
+# Capricorn CI/CD Pipeline
+# Deploys to QA (192.168.1.180) on develop branch
+# Future: Deploy to GCP on production branch
+
+stages:
+  - build
+  - push
+  - deploy_qa
+
+variables:
+  REGISTRY: gitlab.gothamtechnologies.com:5050
+  PROJECT_PATH: production/capricorn
+  IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+  QA_HOST: 192.168.1.180
+  QA_USER: agamache
+  QA_PROJECT_DIR: /home/agamache/projects/unified_ui_DEV_PROD_GCP_2026/capricorn
+
+# ============================================================================
+# BUILD STAGE - Build Frontend and Backend Images
+# ============================================================================
+
+build_frontend:
+  stage: build
+  image: docker:27
+  tags:
+    - docker
+  script:
+    - echo "Building frontend image..."
+    - cd docker
+    - docker build -f Dockerfile.frontend.qa -t $REGISTRY/$PROJECT_PATH/frontend:$IMAGE_TAG -t $REGISTRY/$PROJECT_PATH/frontend:latest ..
+    - echo "Frontend build complete!"
+  only:
+    - develop
+
+build_backend:
+  stage: build
+  image: docker:27
+  tags:
+    - docker
+  script:
+    - echo "Building backend image..."
+    - cd docker
+    - docker build -f Dockerfile.backend.qa -t $REGISTRY/$PROJECT_PATH/backend:$IMAGE_TAG -t $REGISTRY/$PROJECT_PATH/backend:latest ..
+    - echo "Backend build complete!"
+  only:
+    - develop
+
+# ============================================================================
+# PUSH STAGE - Push Images to Container Registry
+# ============================================================================
+
+push_images:
+  stage: push
+  image: docker:27
+  tags:
+    - docker
+  script:
+    - echo "Logging into Container Registry..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $REGISTRY
+    - echo "Pushing frontend images..."
+    - docker push $REGISTRY/$PROJECT_PATH/frontend:$IMAGE_TAG
+    - docker push $REGISTRY/$PROJECT_PATH/frontend:latest
+    - echo "Pushing backend images..."
+    - docker push $REGISTRY/$PROJECT_PATH/backend:$IMAGE_TAG
+    - docker push $REGISTRY/$PROJECT_PATH/backend:latest
+    - echo "All images pushed successfully!"
+  only:
+    - develop
+
+# ============================================================================
+# DEPLOY QA - Deploy to vm-kubernetes-1 @ 192.168.1.180
+# ============================================================================
+
+deploy_qa:
+  stage: deploy_qa
+  image: alpine:latest
+  tags:
+    - docker
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+  script:
+    - echo "Deploying Capricorn to QA host at $QA_HOST..."
+    - |
+      ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "
+        echo '=== Navigating to project directory ===' &&
+        cd $QA_PROJECT_DIR/docker &&
+        
+        echo '=== Stopping old containers ===' &&
+        docker compose -f docker-compose.qa.deploy.yml down || true &&
+        
+        echo '=== Logging into registry ===' &&
+        docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} $REGISTRY &&
+        
+        echo '=== Pulling latest images ===' &&
+        docker pull $REGISTRY/$PROJECT_PATH/frontend:latest &&
+        docker pull $REGISTRY/$PROJECT_PATH/backend:latest &&
+        docker pull postgres:15.5-alpine &&
+        docker pull redis:7.2.4-alpine &&
+        
+        echo '=== Starting services with new images ===' &&
+        docker compose -f docker-compose.qa.deploy.yml up -d &&
+        
+        echo '=== Waiting for services to initialize ===' &&
+        sleep 10 &&
+        
+        echo '=== Verifying deployment ===' &&
+        docker ps | grep capricorn &&
+        
+        echo '=== Deployment complete! ===' &&
+        echo 'Frontend: http://$QA_HOST:5001' &&
+        echo 'Backend API: http://$QA_HOST:5002'
+      "
+    - echo "✅ Capricorn deployed successfully to QA!"
+    - echo "🌐 Frontend: http://$QA_HOST:5001"
+    - echo "🔌 Backend: http://$QA_HOST:5002"
+  environment:
+    name: qa
+    url: http://192.168.1.180:5001
+  only:
+    - develop
+  when: on_success
+
+# ============================================================================
+# Notes:
+# ============================================================================
+# 
+# To trigger deployment:
+#   1. Commit changes to develop branch
+#   2. Push: git push gitlab develop
+#   3. Pipeline auto-runs: build → push → deploy_qa
+#
+# CI/CD Variables Required (set in GitLab project settings):
+#   - CI_REGISTRY_USER: root
+#   - CI_REGISTRY_PASSWORD: [masked]
+#   - SSH_PRIVATE_KEY: [runner's private key]
+#
+# QA Host Prerequisites:
+#   - Docker installed with insecure-registry config
+#   - SSH key authorized from runner
+#   - Project directory structure created
+#   - docker-compose.qa.deploy.yml file present
+#
+# Future: Add deploy_gcp stage for production branch deployment
+

@@ -1,0 +1,70 @@
+# Capricorn QA Deployment Configuration (CI/CD Pipeline)
+# Uses pre-built images from GitLab Container Registry
+# Deployed to: vm-kubernetes-1 @ 192.168.1.180
+# Usage: docker compose -f docker-compose.qa.deploy.yml up -d
+
+services:
+  frontend:
+    image: gitlab.gothamtechnologies.com:5050/production/capricorn/frontend:latest
+    container_name: capricorn-frontend
+    ports:
+      - "5001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  backend:
+    image: gitlab.gothamtechnologies.com:5050/production/capricorn/backend:latest
+    container_name: capricorn-backend
+    ports:
+      - "5002:8000"
+    environment:
+      - DATABASE_URL=postgresql://capricorn:REDACTED_DB_PASSWORD@postgres:5432/capricorn_db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONUNBUFFERED=1
+      - DEBUG=false
+    volumes:
+      - ../backend/market_data:/app/market_data:ro
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  postgres:
+    image: postgres:15.5-alpine
+    container_name: capricorn-postgres
+    # No external port - internal network only in QA
+    environment:
+      - POSTGRES_USER=capricorn
+      - POSTGRES_PASSWORD=REDACTED_DB_PASSWORD
+      - POSTGRES_DB=capricorn_db
+    volumes:
+      - postgres_data_qa:/var/lib/postgresql/data
+      - ../database/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+  redis:
+    image: redis:7.2.4-alpine
+    container_name: capricorn-redis
+    # No external port - internal network only in QA
+    volumes:
+      - redis_data_qa:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - capricorn-network
+
+volumes:
+  postgres_data_qa:
+  redis_data_qa:
+
+networks:
+  capricorn-network:
+    driver: bridge
+
