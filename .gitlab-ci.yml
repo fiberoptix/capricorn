@@ -110,12 +110,17 @@ deploy_qa:
 
 deploy_gcp:
   stage: deploy_gcp
-  image: hashicorp/terraform:latest
+  image: alpine:latest
   tags:
     - docker
   before_script:
     - echo "Installing prerequisites..."
-    - apk add --no-cache bash curl docker docker-cli-buildx
+    - apk add --no-cache bash curl python3 docker docker-cli-buildx
+    - echo "Installing Terraform..."
+    - wget https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
+    - unzip terraform_1.7.0_linux_amd64.zip
+    - mv terraform /usr/local/bin/
+    - terraform version
     - echo "Installing gcloud..."
     - curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
     - tar -xf google-cloud-cli-linux-x86_64.tar.gz
@@ -134,7 +139,7 @@ deploy_gcp:
     - echo "Project ID is $GCP_PROJECT_ID"
     - cd scripts
     - chmod +x run-gcp.sh
-    - ./run-gcp.sh start
+    - bash run-gcp.sh start
     - echo "GCP deployment complete"
     - echo "Production URL is http://capricorn.gothamtechnologies.com"
   environment:
