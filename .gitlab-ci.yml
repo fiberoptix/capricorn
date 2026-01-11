@@ -114,26 +114,32 @@ deploy_gcp:
   tags:
     - docker
   before_script:
-    - echo "Installing prerequisites..."
-    - apk add --no-cache bash curl python3 docker docker-cli-buildx
-    - echo "Installing Terraform..."
-    - wget https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
-    - unzip terraform_1.7.0_linux_amd64.zip
+    - echo "=== Installing prerequisites ==="
+    - apk add --no-cache bash curl wget tar unzip python3 docker docker-cli docker-cli-buildx
+    - echo "=== Installing Terraform 1.7.0 ==="
+    - wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
+    - unzip -q terraform_1.7.0_linux_amd64.zip
     - mv terraform /usr/local/bin/
+    - chmod +x /usr/local/bin/terraform
     - terraform version
-    - echo "Installing gcloud..."
-    - curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-    - tar -xf google-cloud-cli-linux-x86_64.tar.gz
-    - ./google-cloud-sdk/install.sh --quiet --path-update=true
-    - export PATH=$PATH:/builds/production/capricorn/google-cloud-sdk/bin
-    - echo "Installing kubectl..."
+    - echo "=== Installing gcloud SDK ==="
+    - curl -sSL https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz | tar xz
+    - ./google-cloud-sdk/install.sh --quiet --path-update=false --usage-reporting=false
+    - export PATH=$PATH:$(pwd)/google-cloud-sdk/bin
+    - gcloud version
+    - echo "=== Installing kubectl ==="
     - gcloud components install kubectl --quiet
-    - echo "Setting up GCP authentication..."
+    - kubectl version --client
+    - echo "=== Setting up Docker Buildx ==="
+    - docker buildx version
+    - docker buildx create --use --name mybuilder --driver docker-container || docker buildx use mybuilder
+    - echo "=== Setting up GCP authentication ==="
     - echo "$GCP_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcp-key.json
     - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
     - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
     - gcloud config set project $GCP_PROJECT_ID
     - gcloud auth configure-docker gcr.io --quiet
+    - echo "=== Prerequisites complete ==="
   script:
     - echo "Deploying Capricorn to GCP..."
     - echo "Project ID is $GCP_PROJECT_ID"
