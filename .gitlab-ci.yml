@@ -121,12 +121,12 @@ deploy_gcp:
     - gcloud auth configure-docker gcr.io --quiet
   script:
     - echo "Deploying Capricorn to GCP..."
-    - echo "Project ID: $GCP_PROJECT_ID"
+    - echo "Project ID is $GCP_PROJECT_ID"
     - cd scripts
     - chmod +x run-gcp.sh
     - ./run-gcp.sh start
-    - echo "✅ GCP deployment complete!"
-    - echo "🌐 Production URL: http://capricorn.gothamtechnologies.com"
+    - echo "GCP deployment complete"
+    - echo "Production URL is http://capricorn.gothamtechnologies.com"
   environment:
     name: production
     url: http://capricorn.gothamtechnologies.com
