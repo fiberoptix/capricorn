@@ -107,12 +107,19 @@ deploy_qa:
 
 deploy_gcp:
   stage: deploy_gcp
-  image: google/cloud-sdk:alpine
+  image: hashicorp/terraform:latest
   tags:
     - docker
   before_script:
     - echo "Installing prerequisites..."
-    - apk add --no-cache terraform kubectl docker docker-cli-buildx bash
+    - apk add --no-cache bash curl docker docker-cli-buildx
+    - echo "Installing gcloud..."
+    - curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
+    - tar -xf google-cloud-cli-linux-x86_64.tar.gz
+    - ./google-cloud-sdk/install.sh --quiet --path-update=true
+    - export PATH=$PATH:/builds/production/capricorn/google-cloud-sdk/bin
+    - echo "Installing kubectl..."
+    - gcloud components install kubectl --quiet
     - echo "Setting up GCP authentication..."
     - echo "$GCP_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcp-key.json
     - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
