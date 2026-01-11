@@ -143,6 +143,11 @@ deploy_gcp:
   script:
     - echo "Deploying Capricorn to GCP..."
     - echo "Project ID is $GCP_PROJECT_ID"
+    - echo "Creating service account key file from CI/CD variable..."
+    - mkdir -p cloud
+    - echo "$GCP_SERVICE_ACCOUNT_KEY" | base64 -d > cloud/gcp-service-account.json
+    - chmod 600 cloud/gcp-service-account.json
+    - echo "Running deployment script..."
     - cd scripts
     - chmod +x run-gcp.sh
     - bash run-gcp.sh start
