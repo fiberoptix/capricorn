@@ -65,7 +65,33 @@
 - **Frontend:** React 18, TypeScript, Vite, Material-UI, Tailwind CSS
 - **Backend:** FastAPI, Python 3.11, SQLAlchemy 2.0
 - **Database:** PostgreSQL 15, Redis 7
-- **Deployment:** Docker Compose
+- **Deployment:** Docker Compose, Kubernetes (GKE), GitLab CI/CD
+
+---
+
+## 🌐 Deployment Environments
+
+Capricorn supports three deployment environments with automated CI/CD:
+
+### **🖥️ DEV - Local Development**
+- **Purpose:** Active development on your workstation
+- **Ports:** All exposed (5001-5004)
+- **Features:** Hot reload, debugging, direct database access
+- **Script:** `./scripts/run-dev.sh [start|stop|restart|bb|nuke]`
+
+### **🧪 QA - Home Lab Testing**
+- **Purpose:** Automated testing on local Kubernetes
+- **URL:** http://192.168.1.180:5001 (or your QA host)
+- **Deployment:** Automatic on `develop` branch push via GitLab CI/CD
+- **Features:** Production-like environment, automated deployments
+- **Script:** `./scripts/run-qa.sh [start|stop|restart|bb|nuke]` (manual)
+
+### **☁️ GCP - Production (Google Cloud)**
+- **Purpose:** Live production deployment
+- **URL:** http://capricorn.gothamtechnologies.com
+- **Deployment:** Manual button in GitLab on `production` branch
+- **Features:** GKE Autopilot, Ingress, persistent volumes, auto-scaling
+- **Script:** `./scripts/run-gcp.sh [start|stop|restart|bb|nuke]` (manual)
 
 ---
 
@@ -78,7 +104,7 @@
 
 > ⚠️ **Note:** This application currently only runs on Linux. macOS and Windows support may be added in a future release.
 
-### Installation
+### Installation (Simple Method)
 
 ```bash
 # Clone the repository
@@ -89,13 +115,34 @@ cd capricorn
 cp backend/market_data/TwelveData_Config.example.txt backend/market_data/TwelveData_Config.txt
 # Edit the file and add your API key from https://twelvedata.com
 
-# Start all services
-cd docker
-docker-compose up -d --build
+# Start DEV environment
+./scripts/run-dev.sh start
 
 # Wait for services to initialize (~30 seconds)
 # Then open http://localhost:5001 in your browser
 ```
+
+### Installation (Using Deployment Scripts)
+
+Capricorn includes three environment-specific deployment scripts:
+
+```bash
+# DEV - Local development (hot reload)
+./scripts/run-dev.sh start
+
+# QA - Production-like testing
+./scripts/run-qa.sh start
+
+# GCP - Deploy to Google Cloud (requires GCP setup)
+./scripts/run-gcp.sh start
+```
+
+**Script Commands:**
+- `start` - Start containers (default)
+- `stop` - Stop containers
+- `restart` - Restart containers
+- `bb` - Burn & Build (rebuild from scratch + run QA tests)
+- `nuke` - Complete destruction (requires typing 'NUKE')
 
 ### 🎮 Try with Demo Data (Recommended for First-Time Users)
 
@@ -170,6 +217,57 @@ capricorn/
 │   └── docker-compose.yml   # Docker orchestration
 └── README.md
 ```
+
+---
+
+## 🔄 CI/CD Pipeline
+
+**GitLab CI/CD integration for automated deployments:**
+
+### Workflow
+
+**QA Deployment (Automatic):**
+```bash
+# Push to develop branch
+git push gitlab develop
+
+# Pipeline automatically:
+# 1. Builds frontend + backend Docker images
+# 2. Pushes to GitLab Container Registry
+# 3. Deploys to QA host (192.168.1.180)
+# Result: App live in ~3-5 minutes
+```
+
+**GCP Deployment (Manual):**
+```bash
+# Merge develop to production
+git checkout production
+git merge develop
+git push gitlab production
+
+# In GitLab UI:
+# 1. Go to Pipelines
+# 2. Click "Deploy" button next to deploy_gcp
+# 3. Wait 10-15 minutes for GCP deployment
+# Result: App live at capricorn.gothamtechnologies.com
+```
+
+### Pipeline Stages
+
+| Stage | Description | Duration |
+|-------|-------------|----------|
+| `build_frontend` | Vite production build | ~40s |
+| `build_backend` | FastAPI Docker image | ~30s |
+| `push_images` | Push to Container Registry | ~30s |
+| `deploy_qa` | Deploy to QA host (develop branch) | ~60s |
+| `deploy_gcp` | Deploy to GCP (production branch, manual) | ~10-15m |
+
+**CI/CD Variables Required (GitLab Settings → CI/CD → Variables):**
+- `CI_REGISTRY_USER` - GitLab registry username
+- `CI_REGISTRY_PASSWORD` - GitLab registry password
+- `SSH_PRIVATE_KEY` - SSH key for QA deployment
+- `GCP_SERVICE_ACCOUNT_KEY` - GCP service account JSON (base64)
+- `GCP_PROJECT_ID` - Google Cloud project ID
 
 ---
 
