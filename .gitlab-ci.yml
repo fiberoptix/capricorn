@@ -6,6 +6,7 @@ stages:
   - build
   - push
   - deploy_qa
+  - deploy_gcp
 
 variables:
   REGISTRY: gitlab.gothamtechnologies.com:5050
@@ -101,24 +102,60 @@ deploy_qa:
   when: on_success
 
 # ============================================================================
+# DEPLOY GCP - Deploy to Google Cloud Platform (Real Production)
+# ============================================================================
+
+deploy_gcp:
+  stage: deploy_gcp
+  image: google/cloud-sdk:alpine
+  tags:
+    - docker
+  before_script:
+    - echo "Installing prerequisites..."
+    - apk add --no-cache terraform kubectl docker docker-cli-buildx bash
+    - echo "Setting up GCP authentication..."
+    - echo "$GCP_SERVICE_ACCOUNT_KEY" | base64 -d > /tmp/gcp-key.json
+    - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json
+    - gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+    - gcloud config set project $GCP_PROJECT_ID
+    - gcloud auth configure-docker gcr.io --quiet
+  script:
+    - echo "Deploying Capricorn to GCP..."
+    - echo "Project ID: $GCP_PROJECT_ID"
+    - cd scripts
+    - chmod +x run-gcp.sh
+    - ./run-gcp.sh start
+    - echo "✅ GCP deployment complete!"
+    - echo "🌐 Production URL: http://capricorn.gothamtechnologies.com"
+  environment:
+    name: production
+    url: http://capricorn.gothamtechnologies.com
+  only:
+    - production
+  when: manual
+  allow_failure: false
+
+# ============================================================================
 # Notes:
 # ============================================================================
 # 
-# To trigger deployment:
-#   1. Commit changes to develop branch
-#   2. Push: git push gitlab develop
-#   3. Pipeline auto-runs: build → push → deploy_qa
+# QA Deployment (develop branch):
+#   - Automatic on push
+#   - Target: 192.168.1.180:5001
+#   - Method: docker-compose.qa.deploy.yml
+#
+# GCP Deployment (production branch):
+#   - Manual button click
+#   - Target: Google Cloud Platform
+#   - Method: run-gcp.sh script (Terraform + GKE)
 #
 # CI/CD Variables Required (set in GitLab project settings):
-#   - CI_REGISTRY_USER: root
-#   - CI_REGISTRY_PASSWORD: [masked]
-#   - SSH_PRIVATE_KEY: [runner's private key]
-#
-# QA Host Prerequisites:
-#   - Docker installed with insecure-registry config
-#   - SSH key authorized from runner
-#   - Project directory structure created
-#   - docker-compose.qa.deploy.yml file present
-#
-# Future: Add deploy_gcp stage for production branch deployment
+#   QA Deployment:
+#     - CI_REGISTRY_USER: root
+#     - CI_REGISTRY_PASSWORD: [masked]
+#     - SSH_PRIVATE_KEY: [runner's private key]
+#   
+#   GCP Deployment:
+#     - GCP_SERVICE_ACCOUNT_KEY: [base64 encoded service account JSON]
+#     - GCP_PROJECT_ID: voltaic-cirrus-476620-h5
 
