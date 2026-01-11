@@ -55,8 +55,8 @@ start_containers() {
     echo "=============================="
     echo ""
     
-    # Stop PROD if running (to free ports)
-    $DOCKER_COMPOSE -f docker-compose.prod.yml down 2>/dev/null || true
+    # Stop QA if running (to free ports)
+    $DOCKER_COMPOSE -f docker-compose.qa.yml down 2>/dev/null || true
     
     echo "🔨 Building and starting DEV environment..."
     $DOCKER_COMPOSE -f docker-compose.dev.yml up -d --build
@@ -93,7 +93,7 @@ burn_and_build() {
     
     echo "🧹 Step 1/4: Stopping containers..."
     $DOCKER_COMPOSE -f docker-compose.dev.yml down 2>/dev/null || true
-    $DOCKER_COMPOSE -f docker-compose.prod.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.qa.yml down 2>/dev/null || true
     
     echo ""
     echo "🔨 Step 2/4: Rebuilding without cache..."
