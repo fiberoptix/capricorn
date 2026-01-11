@@ -84,36 +84,14 @@ deploy_qa:
     - chmod 700 ~/.ssh
   script:
     - echo "Deploying Capricorn to QA host at $QA_HOST..."
-    - |
-      ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "
-        echo '=== Navigating to project directory ===' &&
-        cd $QA_PROJECT_DIR/docker &&
-        
-        echo '=== Stopping old containers ===' &&
-        docker compose -f docker-compose.qa.deploy.yml down || true &&
-        
-        echo '=== Logging into registry ===' &&
-        docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} $REGISTRY &&
-        
-        echo '=== Pulling latest images ===' &&
-        docker pull $REGISTRY/$PROJECT_PATH/frontend:latest &&
-        docker pull $REGISTRY/$PROJECT_PATH/backend:latest &&
-        docker pull postgres:15.5-alpine &&
-        docker pull redis:7.2.4-alpine &&
-        
-        echo '=== Starting services with new images ===' &&
-        docker compose -f docker-compose.qa.deploy.yml up -d &&
-        
-        echo '=== Waiting for services to initialize ===' &&
-        sleep 10 &&
-        
-        echo '=== Verifying deployment ===' &&
-        docker ps | grep capricorn &&
-        
-        echo '=== Deployment complete! ===' &&
-        echo 'Frontend: http://$QA_HOST:5001' &&
-        echo 'Backend API: http://$QA_HOST:5002'
-      "
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "cd $QA_PROJECT_DIR/docker && docker compose -f docker-compose.qa.deploy.yml down || true"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} $REGISTRY"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "docker pull $REGISTRY/$PROJECT_PATH/frontend:latest"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "docker pull $REGISTRY/$PROJECT_PATH/backend:latest"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "docker pull postgres:15.5-alpine"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "docker pull redis:7.2.4-alpine"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "cd $QA_PROJECT_DIR/docker && docker compose -f docker-compose.qa.deploy.yml up -d"
+    - ssh -o StrictHostKeyChecking=no $QA_USER@$QA_HOST "sleep 10 && docker ps | grep capricorn"
     - echo "✅ Capricorn deployed successfully to QA!"
     - echo "🌐 Frontend: http://$QA_HOST:5001"
     - echo "🔌 Backend: http://$QA_HOST:5002"
