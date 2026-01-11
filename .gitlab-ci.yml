@@ -32,6 +32,7 @@ build_frontend:
     - echo "Frontend build complete!"
   only:
     - develop
+    - production
 
 build_backend:
   stage: build
@@ -45,6 +46,7 @@ build_backend:
     - echo "Backend build complete!"
   only:
     - develop
+    - production
 
 # ============================================================================
 # PUSH STAGE - Push Images to Container Registry
@@ -67,6 +69,7 @@ push_images:
     - echo "All images pushed successfully!"
   only:
     - develop
+    - production
 
 # ============================================================================
 # DEPLOY QA - Deploy to vm-kubernetes-1 @ 192.168.1.180
