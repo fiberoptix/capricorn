@@ -115,7 +115,7 @@ deploy_gcp:
     - docker
   before_script:
     - echo "=== Installing prerequisites ==="
-    - apk add --no-cache bash curl wget tar unzip python3 docker docker-cli docker-cli-buildx
+    - apk add --no-cache bash curl wget tar unzip python3 git docker docker-cli docker-cli-buildx
     - echo "=== Installing Terraform 1.7.0 ==="
     - wget -q https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
     - unzip -q terraform_1.7.0_linux_amd64.zip
