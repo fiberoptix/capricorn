@@ -356,10 +356,9 @@ def filter_internal_transfers(master_file):
             'TRANSFER TO CHK' in description or
             'TRANSFER FROM SAV' in description or
             'TRANSFER FROM CHK' in description or
-            ('ONLINE BANKING TRANSFER' in description and ('SAV' in description or 'CHK' in description)) or
-            ('ONLINE BANKING PAYMENT' in description and ('CRD' in description or 'CHK' in description or 'SAV' in description)) or
-            'ONLINE PAYMENT FROM CHK' in description or
-            'ONLINE PAYMENT FROM SAV' in description or
+            'ONLINE BANKING' in description or
+            'ONLINE PAYMENT' in description or
+            'ONLINE SCHEDULED' in description or
             'MOBILE PAYMENT' in description or
             'PAYMENT THANK YOU' in description
         )
