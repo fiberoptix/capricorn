@@ -116,15 +116,19 @@ deploy_qa:
     - chmod 700 ~/.ssh
   script:
     - echo "Deploying Capricorn to QA host..."
-    - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "cd /home/agamache/projects/unified_ui_DEV_PROD_GCP_2026/capricorn/docker && docker compose -f docker-compose.qa.deploy.yml down || true"
+    - echo "⚠️  Performing FULL teardown (including volumes) for clean QA environment..."
+    - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "cd /home/agamache/projects/unified_ui_DEV_PROD_GCP_2026/capricorn/docker && docker compose -f docker-compose.qa.deploy.yml down -v || true"
+    - echo "✅ Old containers and volumes removed"
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "docker login -u root -p REDACTED_GITLAB_PASSWORD gitlab.gothamtechnologies.com:5050"
+    - echo "📥 Pulling latest images from registry..."
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "docker pull gitlab.gothamtechnologies.com:5050/production/capricorn/frontend:latest"
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "docker pull gitlab.gothamtechnologies.com:5050/production/capricorn/backend:latest"
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "docker pull postgres:15.5-alpine"
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "docker pull redis:7.2.4-alpine"
+    - echo "🚀 Starting fresh containers with demo data..."
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "cd /home/agamache/projects/unified_ui_DEV_PROD_GCP_2026/capricorn/docker && docker compose -f docker-compose.qa.deploy.yml up -d"
     - ssh -o StrictHostKeyChecking=no agamache@192.168.1.180 "sleep 10 && docker ps | grep capricorn"
-    - echo "Capricorn deployed to http://192.168.1.180:5001"
+    - echo "✅ Capricorn deployed to http://192.168.1.180:5001 (FRESH INSTALL with demo data)"
   environment:
     name: qa
     url: http://192.168.1.180:5001
