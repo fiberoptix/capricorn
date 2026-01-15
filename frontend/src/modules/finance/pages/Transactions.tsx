@@ -193,12 +193,31 @@ const CustomDensitySelector = () => {
   );
 };
 
-const CustomToolbar = () => (
+interface CustomToolbarProps {
+  selectedRows: string[];
+  onDelete: () => void;
+}
+
+const CustomToolbar: React.FC<CustomToolbarProps> = ({ selectedRows, onDelete }) => (
   <GridToolbarContainer>
     <GridToolbarColumnsButton />
     <GridToolbarFilterButton />
     <CustomDensitySelector />
     <GridToolbarExport />
+    {selectedRows.length > 0 && (
+      <Button
+        size="small"
+        startIcon={<Delete />}
+        onClick={onDelete}
+        sx={{ 
+          minWidth: 'auto', 
+          color: 'error.main',
+          '&:hover': { bgcolor: 'error.50' }
+        }}
+      >
+        Delete ({selectedRows.length})
+      </Button>
+    )}
     <GridToolbarQuickFilter />
   </GridToolbarContainer>
 );
@@ -222,6 +241,7 @@ const Transactions: React.FC = () => {
   const [doubleCharges, setDoubleCharges] = useState<DoubleChargeGroup[]>([]);
   const [doubleChargesDialog, setDoubleChargesDialog] = useState(false);
   const [isLoadingDoubleCharges, setIsLoadingDoubleCharges] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   const fetchData = async (period: string = 'this_year', startDate?: string, endDate?: string) => {
     try {
@@ -305,6 +325,52 @@ const Transactions: React.FC = () => {
         }
       } catch (error) {
         alert('Failed to delete transaction. Please try again.');
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) return;
+    
+    const confirmMessage = `Are you sure you want to delete ${selectedRows.length} selected transaction${selectedRows.length > 1 ? 's' : ''}?\n\nThis action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const transactionId of selectedRows) {
+      try {
+        const response = await financeAPI.deleteTransaction(transactionId);
+        if (response.data?.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    // Update UI - remove deleted transactions
+    setTransactions(prev => prev.filter(tx => !selectedRows.includes(tx.id)));
+    setSelectedRows([]);
+
+    // Show result
+    if (failCount === 0) {
+      alert(`✅ Successfully deleted ${successCount} transaction${successCount > 1 ? 's' : ''}`);
+    } else {
+      alert(`⚠️ Deleted ${successCount} transaction${successCount > 1 ? 's' : ''}\nFailed to delete ${failCount} transaction${failCount > 1 ? 's' : ''}`);
+    }
+
+    // Refresh double charges if needed
+    if (showDoubleCharges) {
+      try {
+        const doubleChargesResponse = await financeAPI.getDoubleCharges();
+        if (doubleChargesResponse.data?.success) {
+          setDoubleCharges(doubleChargesResponse.data.data.double_charge_groups || []);
+        }
+      } catch (error) {
+        // Ignore error
       }
     }
   };
@@ -600,8 +666,18 @@ const Transactions: React.FC = () => {
             pageSizeOptions={[25, 50, 100, 200, 500]}
             checkboxSelection
             disableRowSelectionOnClick
+            onRowSelectionModelChange={(newSelection) => {
+              setSelectedRows(newSelection as string[]);
+            }}
             slots={{ toolbar: CustomToolbar }}
-            slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 500 } } }}
+            slotProps={{ 
+              toolbar: { 
+                showQuickFilter: true, 
+                quickFilterProps: { debounceMs: 500 },
+                selectedRows: selectedRows,
+                onDelete: handleBulkDelete
+              } 
+            }}
             sx={{
               minHeight: 500,
               '& .MuiDataGrid-columnHeader': {
