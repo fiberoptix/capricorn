@@ -180,7 +180,7 @@ async def get_double_charges(
 
 @router.delete("/{transaction_id}")
 async def delete_transaction(
-    transaction_id: str,
+    transaction_id: int,
     db: AsyncSession = Depends(get_async_db)
 ) -> Dict[str, Any]:
     """
