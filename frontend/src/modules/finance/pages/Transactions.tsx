@@ -351,7 +351,8 @@ const Transactions: React.FC = () => {
   const handleBulkDelete = async () => {
     if (selectedRows.length === 0) return;
     
-    const confirmMessage = `Are you sure you want to delete ${selectedRows.length} selected transaction${selectedRows.length > 1 ? 's' : ''}?\n\nThis action cannot be undone.`;
+    // Confirmation dialog with "permanently"
+    const confirmMessage = `Are you sure you want to delete ${selectedRows.length} transaction${selectedRows.length > 1 ? 's' : ''} permanently?`;
     if (!window.confirm(confirmMessage)) return;
 
     let successCount = 0;
@@ -374,12 +375,11 @@ const Transactions: React.FC = () => {
     setTransactions(prev => prev.filter(tx => !selectedRows.includes(tx.id)));
     setSelectedRows([]);
 
-    // Show result
-    if (failCount === 0) {
-      alert(`✅ Successfully deleted ${successCount} transaction${successCount > 1 ? 's' : ''}`);
-    } else {
+    // Show result only if there were failures
+    if (failCount > 0) {
       alert(`⚠️ Deleted ${successCount} transaction${successCount > 1 ? 's' : ''}\nFailed to delete ${failCount} transaction${failCount > 1 ? 's' : ''}`);
     }
+    // Silent success - UI updates immediately
 
     // Refresh double charges if needed
     if (showDoubleCharges) {
