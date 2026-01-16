@@ -360,7 +360,8 @@ def filter_internal_transfers(master_file):
             'ONLINE PAYMENT' in description or
             'ONLINE SCHEDULED' in description or
             'MOBILE PAYMENT' in description or
-            'PAYMENT THANK YOU' in description
+            'PAYMENT THANK YOU' in description or
+            'AUTOPAY PAYMENT' in description
         )
         
         if is_internal_transfer:

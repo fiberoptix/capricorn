@@ -107,6 +107,39 @@ class TransactionPipeline:
             columns = ['transaction_date', 'description', 'amount', 'spender', 'source', 'transaction_type', 'tag', 'duplicate']
             transactions_df = pd.DataFrame(transactions_list, columns=columns)
             
+            # Filter out internal transfers BEFORE processing
+            print(f"🗑️  Filtering internal transfers...")
+            original_count = len(transactions_df)
+            
+            def is_internal_transfer(description: str) -> bool:
+                """Check if transaction is an internal transfer that should be filtered"""
+                desc_upper = str(description).upper()
+                return (
+                    'TRANSFER TO SAV' in desc_upper or
+                    'TRANSFER TO CHK' in desc_upper or
+                    'TRANSFER FROM SAV' in desc_upper or
+                    'TRANSFER FROM CHK' in desc_upper or
+                    'ONLINE BANKING' in desc_upper or
+                    'ONLINE PAYMENT' in desc_upper or
+                    'ONLINE SCHEDULED' in desc_upper or
+                    'MOBILE PAYMENT' in desc_upper or
+                    'PAYMENT THANK YOU' in desc_upper or
+                    'AUTOPAY PAYMENT' in desc_upper
+                )
+            
+            transactions_df = transactions_df[~transactions_df['description'].apply(is_internal_transfer)]
+            filtered_count = original_count - len(transactions_df)
+            print(f"   🗑️  Removed {filtered_count} internal transfers")
+            print(f"   ✅ {len(transactions_df)} transactions remaining")
+            
+            if len(transactions_df) == 0:
+                return {
+                    "status": "success",
+                    "message": "All transactions were internal transfers (filtered out)",
+                    "transactions_processed": 0,
+                    "filtered_out": filtered_count
+                }
+            
             # Step 3: Auto-tag transactions
             tagged_transactions = []
             for _, row in transactions_df.iterrows():

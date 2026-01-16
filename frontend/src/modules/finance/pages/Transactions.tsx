@@ -480,18 +480,21 @@ const Transactions: React.FC = () => {
       type: 'number',
       align: 'right',
       headerAlign: 'left',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
-          {params.value > 0 ? (
-            <TrendingUp sx={{ fontSize: 16, color: theme.palette.success.main }} />
-          ) : (
-            <TrendingDown sx={{ fontSize: 16, color: theme.palette.error.main }} />
-          )}
-          <Typography variant="body2" sx={{ fontWeight: 600, color: params.value > 0 ? theme.palette.success.main : theme.palette.error.main }}>
-            ${Math.abs(params.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </Typography>
-        </Box>
-      ),
+      renderCell: (params) => {
+        const isCredit = params.row.tag === 'credit';
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+            {isCredit ? (
+              <TrendingUp sx={{ fontSize: 16, color: theme.palette.success.main }} />
+            ) : (
+              <TrendingDown sx={{ fontSize: 16, color: theme.palette.error.main }} />
+            )}
+            <Typography variant="body2" sx={{ fontWeight: 600, color: isCredit ? theme.palette.success.main : theme.palette.error.main }}>
+              ${Math.abs(params.value).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </Typography>
+          </Box>
+        );
+      },
     },
     {
       field: 'category',

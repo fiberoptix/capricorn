@@ -54,6 +54,9 @@ frontend/build/
 .env.*.local
 *.env
 
+# Passwords - NEVER commit these!
+PASSWORDS.md
+
 # API Keys - NEVER commit these!
 backend/market_data/TwelveData_Config.txt
 
