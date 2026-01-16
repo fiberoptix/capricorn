@@ -458,7 +458,9 @@ async def get_categories(
         })
     
     return {
-        "data": categories
+        "success": True,
+        "data": categories,
+        "message": f"Retrieved {len(categories)} categories"
     }
 
 

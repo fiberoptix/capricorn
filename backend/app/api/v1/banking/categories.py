@@ -18,7 +18,7 @@ from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryRespons
 router = APIRouter()
 
 
-@router.get("/", response_model=List[CategoryResponse])
+@router.get("/")
 async def get_categories(
     category_type: Optional[str] = Query(None, description="Filter by category type (income/expense)"),
     search: Optional[str] = Query(None, description="Search categories by name"),
@@ -38,7 +38,7 @@ async def get_categories(
     # Order by name
     categories = query.order_by(Category.name).all()
     
-    return [
+    category_data = [
         CategoryResponse(
             id=str(category.id),
             name=category.name,
@@ -51,9 +51,15 @@ async def get_categories(
         )
         for category in categories
     ]
+    
+    return {
+        "success": True,
+        "data": category_data,
+        "message": f"Retrieved {len(category_data)} categories"
+    }
 
 
-@router.post("/", response_model=CategoryResponse)
+@router.post("/")
 async def create_category(
     category: CategoryCreate,
     db: Session = Depends(get_db),
@@ -84,7 +90,7 @@ async def create_category(
     db.commit()
     db.refresh(db_category)
     
-    return CategoryResponse(
+    category_data = CategoryResponse(
         id=str(db_category.id),
         name=db_category.name,
         description=db_category.description,
@@ -94,6 +100,12 @@ async def create_category(
         created_at=db_category.created_at,
         updated_at=db_category.updated_at
     )
+    
+    return {
+        "success": True,
+        "data": category_data,
+        "message": f"Category '{db_category.name}' created successfully"
+    }
 
 
 @router.get("/stats/summary", response_model=Dict[str, Any])
