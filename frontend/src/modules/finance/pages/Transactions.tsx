@@ -458,8 +458,7 @@ const Transactions: React.FC = () => {
         setSelectedRows([]);
         handleBulkCategoryDropdownClose();
         
-        // Show success message
-        alert(`✅ Successfully updated ${response.data.data.updated_count} transaction(s) to category "${categoryName}"`);
+        // Success - no alert needed, UI updates immediately
       }
     } catch (error) {
       console.error('Error bulk updating transaction categories:', error);

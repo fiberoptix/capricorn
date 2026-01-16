@@ -178,7 +178,11 @@ export const financeAPI = {
 
   // Bulk update transaction categories
   bulkUpdateTransactionCategory: async (transactionIds: string[], categoryId: string) => {
-    const response = await axios.put(`${API_BASE_URL}/transactions/bulk/category?category_id=${categoryId}`, transactionIds);
+    // FastAPI expects the list directly as the body, not wrapped in an object
+    const response = await axios.put(
+      `${API_BASE_URL}/transactions/bulk/category?category_id=${categoryId}`,
+      transactionIds.map(id => parseInt(id))
+    );
     return response;
   },
 

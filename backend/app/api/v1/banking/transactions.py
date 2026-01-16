@@ -16,66 +16,8 @@ from app.core.constants import SINGLE_USER_ID
 router = APIRouter(tags=["Transactions"])
 
 
-@router.put("/{transaction_id}/category")
-async def update_transaction_category(
-    transaction_id: int,
-    category_id: int = Query(..., description="Category ID to assign"),
-    db: AsyncSession = Depends(get_async_db)
-):
-    """
-    Update the category of a specific transaction.
-    """
-    try:
-        # Find the transaction
-        transaction_query = select(Transaction).filter(
-            and_(
-                Transaction.id == transaction_id,
-                Transaction.user_id == SINGLE_USER_ID
-            )
-        )
-        transaction_result = await db.execute(transaction_query)
-        transaction = transaction_result.scalar_one_or_none()
-        
-        if not transaction:
-            raise HTTPException(
-                status_code=404,
-                detail="Transaction not found"
-            )
-        
-        # Verify the category exists
-        category_query = select(Category).filter(Category.id == category_id)
-        category_result = await db.execute(category_query)
-        category = category_result.scalar_one_or_none()
-        
-        if not category:
-            raise HTTPException(
-                status_code=404,
-                detail="Category not found"
-            )
-        
-        # Update the transaction category
-        transaction.category_id = category_id
-        await db.commit()
-        
-        return {
-            "success": True,
-            "message": f"Transaction category updated to '{category.name}' successfully",
-            "data": {
-                "transaction_id": str(transaction_id),
-                "category_id": str(category_id),
-                "category_name": category.name
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update transaction category: {str(e)}"
-        )
-
+# IMPORTANT: More specific routes (like /bulk/category) must come BEFORE parameterized routes (/{transaction_id}/category)
+# Otherwise FastAPI will try to parse "bulk" as a transaction_id integer
 
 @router.put("/bulk/category")
 async def bulk_update_transaction_category(
@@ -149,6 +91,67 @@ async def bulk_update_transaction_category(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to bulk update transaction categories: {str(e)}"
+        )
+
+
+@router.put("/{transaction_id}/category")
+async def update_transaction_category(
+    transaction_id: int,
+    category_id: int = Query(..., description="Category ID to assign"),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Update the category of a specific transaction.
+    """
+    try:
+        # Find the transaction
+        transaction_query = select(Transaction).filter(
+            and_(
+                Transaction.id == transaction_id,
+                Transaction.user_id == SINGLE_USER_ID
+            )
+        )
+        transaction_result = await db.execute(transaction_query)
+        transaction = transaction_result.scalar_one_or_none()
+        
+        if not transaction:
+            raise HTTPException(
+                status_code=404,
+                detail="Transaction not found"
+            )
+        
+        # Verify the category exists
+        category_query = select(Category).filter(Category.id == category_id)
+        category_result = await db.execute(category_query)
+        category = category_result.scalar_one_or_none()
+        
+        if not category:
+            raise HTTPException(
+                status_code=404,
+                detail="Category not found"
+            )
+        
+        # Update the transaction category
+        transaction.category_id = category_id
+        await db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Transaction category updated to '{category.name}' successfully",
+            "data": {
+                "transaction_id": str(transaction_id),
+                "category_id": str(category_id),
+                "category_name": category.name
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update transaction category: {str(e)}"
         )
 
 
