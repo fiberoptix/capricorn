@@ -272,10 +272,14 @@ export const Dashboard: React.FC = () => {
         const profileData = await profileResponse.json();
         const profile = profileData.profile;
 
-        // Calculate total income (same calculation as Taxes module)
+        // Calculate gross income (salary + bonus for both)
         const userBonus = profile.user_salary * (profile.user_bonus_rate || 0);
         const partnerBonus = (profile.partner_salary || 0) * (profile.partner_bonus_rate || 0);
-        const totalIncome = profile.user_salary + (profile.partner_salary || 0) + userBonus + partnerBonus;
+        const grossIncome = profile.user_salary + (profile.partner_salary || 0) + userBonus + partnerBonus;
+        
+        // Subtract 401k contributions to get taxable income
+        const total401k = (profile.user_401k_contribution || 0) + (profile.partner_401k_contribution || 0);
+        const totalIncome = grossIncome - total401k;
 
         // Call tax API
         const taxResponse = await fetch(`${API_BASE}/tax/income`, {

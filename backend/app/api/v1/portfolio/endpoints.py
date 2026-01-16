@@ -109,7 +109,7 @@ async def get_portfolio_summary(db: AsyncSession = Depends(get_async_db)):
                 profile_model = result.scalar_one_or_none()
                 
                 if profile_model:
-                    annual_income = ProfileService.get_annual_household_income(profile_model)
+                    annual_income = ProfileService.get_taxable_household_income(profile_model)
                     
                     # For summary, use conservative short-term tax calculation
                     tax_result = await tax_service.calculate_short_term_capital_gains_tax(
@@ -393,7 +393,7 @@ async def calculate_portfolio_break_even(
         profile_dict = await ProfileService.get_profile(db)
         result = await db.execute(select(UserProfile).where(UserProfile.id == 1))
         profile_model = result.scalar_one_or_none()
-        annual_income = ProfileService.get_annual_household_income(profile_model) if profile_model else 300000.0
+        annual_income = ProfileService.get_taxable_household_income(profile_model) if profile_model else 300000.0
         tax_service = TaxCalculationService(db)
         
         # Get portfolio
@@ -1177,7 +1177,7 @@ async def calculate_capital_gains_tax(
         profile_dict = await ProfileService.get_profile(db)
         result = await db.execute(select(UserProfile).where(UserProfile.id == 1))
         profile_model = result.scalar_one_or_none()
-        annual_income = ProfileService.get_annual_household_income(profile_model) if profile_model else 300000.0
+        annual_income = ProfileService.get_taxable_household_income(profile_model) if profile_model else 300000.0
         
         tax_service = TaxCalculationService(db)
         

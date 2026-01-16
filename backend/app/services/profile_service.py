@@ -125,8 +125,9 @@ class ProfileService:
     @staticmethod
     def get_annual_household_income(profile: UserProfile) -> float:
         """
-        Calculate annual household income for tax purposes
+        Calculate annual GROSS household income (before 401k deductions)
         Includes salaries + bonuses for both user and partner
+        NOTE: For tax calculations, use get_taxable_household_income() instead
         """
         user_salary = float(profile.user_salary) if profile.user_salary else 0.0
         user_bonus = user_salary * (float(profile.user_bonus_rate) if profile.user_bonus_rate else 0.0)
@@ -135,6 +136,21 @@ class ProfileService:
         partner_bonus = partner_salary * (float(profile.partner_bonus_rate) if profile.partner_bonus_rate else 0.0)
         
         return user_salary + user_bonus + partner_salary + partner_bonus
+    
+    @staticmethod
+    def get_taxable_household_income(profile: UserProfile) -> float:
+        """
+        Calculate annual TAXABLE household income (after 401k deductions)
+        This is gross income minus 401k contributions.
+        Use this for tax calculations.
+        """
+        gross_income = ProfileService.get_annual_household_income(profile)
+        
+        user_401k = float(profile.user_401k_contribution) if profile.user_401k_contribution else 0.0
+        partner_401k = float(profile.partner_401k_contribution) if profile.partner_401k_contribution else 0.0
+        total_401k = user_401k + partner_401k
+        
+        return gross_income - total_401k
     
     @staticmethod
     def _to_dict(profile: UserProfile) -> Dict[str, Any]:
