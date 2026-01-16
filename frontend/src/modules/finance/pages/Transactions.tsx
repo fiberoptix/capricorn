@@ -261,6 +261,10 @@ const Transactions: React.FC = () => {
   const [bulkCategoryDropdown, setBulkCategoryDropdown] = useState<{
     anchorEl: HTMLElement | null;
   }>({ anchorEl: null });
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    open: boolean;
+    count: number;
+  }>({ open: false, count: 0 });
 
   const fetchData = async (period: string = 'this_year', startDate?: string, endDate?: string) => {
     try {
@@ -348,12 +352,16 @@ const Transactions: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedRows.length === 0) return;
     
-    // Confirmation dialog with "permanently"
-    const confirmMessage = `Are you sure you want to delete ${selectedRows.length} transaction${selectedRows.length > 1 ? 's' : ''} permanently?`;
-    if (!window.confirm(confirmMessage)) return;
+    // Open confirmation dialog
+    setDeleteConfirmDialog({ open: true, count: selectedRows.length });
+  };
+
+  const handleDeleteConfirm = async () => {
+    // Close dialog
+    setDeleteConfirmDialog({ open: false, count: 0 });
 
     let successCount = 0;
     let failCount = 0;
@@ -392,6 +400,10 @@ const Transactions: React.FC = () => {
         // Ignore error
       }
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmDialog({ open: false, count: 0 });
   };
 
   const handleCategoryClick = (event: React.MouseEvent<HTMLElement>, transaction: Transaction) => {
@@ -825,6 +837,57 @@ const Transactions: React.FC = () => {
         currentCategory={undefined}
         transactionId=""
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmDialog.open}
+        onClose={handleDeleteCancel}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.shadows[24]
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: 'error.main', 
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <Warning />
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Typography variant="body1">
+            Are you sure you want to delete <strong>{deleteConfirmDialog.count} transaction{deleteConfirmDialog.count > 1 ? 's' : ''}</strong> permanently?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button 
+            onClick={handleDeleteCancel} 
+            variant="outlined"
+            sx={{ minWidth: 100 }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            variant="contained" 
+            color="error"
+            startIcon={<Delete />}
+            sx={{ minWidth: 100 }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
