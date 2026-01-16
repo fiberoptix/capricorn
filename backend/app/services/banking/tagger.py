@@ -430,6 +430,10 @@ def get_exact_mappings():
         "BKOFAMERICA MOBILE 01/25 XXXXX51013 DEPOSIT *MOBILE NY": "BofA Deposit",
         "BKOFAMERICA MOBILE 12/08 XXXXX62410 DEPOSIT *MOBILE NY": "BofA Deposit",
         
+        # INCOME Jackie
+        "WHATNOT": "INCOME Jackie",
+        "NAVAN": "INCOME Jackie",
+        
         # Activities
         "NEW YORK CITY BALLETNEW YORK            NY": "Activities",
         
