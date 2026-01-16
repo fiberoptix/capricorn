@@ -18,8 +18,8 @@ router = APIRouter(tags=["Transactions"])
 
 @router.put("/{transaction_id}/category")
 async def update_transaction_category(
-    transaction_id: str,
-    category_id: str = Query(..., description="Category ID to assign"),
+    transaction_id: int,
+    category_id: int = Query(..., description="Category ID to assign"),
     db: AsyncSession = Depends(get_async_db)
 ):
     """
@@ -61,8 +61,8 @@ async def update_transaction_category(
             "success": True,
             "message": f"Transaction category updated to '{category.name}' successfully",
             "data": {
-                "transaction_id": transaction_id,
-                "category_id": category_id,
+                "transaction_id": str(transaction_id),
+                "category_id": str(category_id),
                 "category_name": category.name
             }
         }
@@ -74,6 +74,81 @@ async def update_transaction_category(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update transaction category: {str(e)}"
+        )
+
+
+@router.put("/bulk/category")
+async def bulk_update_transaction_category(
+    transaction_ids: list[int],
+    category_id: int = Query(..., description="Category ID to assign to all transactions"),
+    db: AsyncSession = Depends(get_async_db)
+) -> Dict[str, Any]:
+    """
+    Update the category for multiple transactions at once.
+    """
+    try:
+        if not transaction_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="No transaction IDs provided"
+            )
+        
+        # Verify the category exists
+        category_query = select(Category).filter(Category.id == category_id)
+        category_result = await db.execute(category_query)
+        category = category_result.scalar_one_or_none()
+        
+        if not category:
+            raise HTTPException(
+                status_code=404,
+                detail="Category not found"
+            )
+        
+        # Update all transactions
+        updated_count = 0
+        failed_ids = []
+        
+        for transaction_id in transaction_ids:
+            try:
+                transaction_query = select(Transaction).filter(
+                    and_(
+                        Transaction.id == transaction_id,
+                        Transaction.user_id == SINGLE_USER_ID
+                    )
+                )
+                transaction_result = await db.execute(transaction_query)
+                transaction = transaction_result.scalar_one_or_none()
+                
+                if transaction:
+                    transaction.category_id = category_id
+                    updated_count += 1
+                else:
+                    failed_ids.append(str(transaction_id))
+            except Exception as e:
+                failed_ids.append(str(transaction_id))
+                print(f"Failed to update transaction {transaction_id}: {str(e)}")
+        
+        await db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Updated {updated_count} transaction(s) to category '{category.name}'",
+            "data": {
+                "updated_count": updated_count,
+                "failed_count": len(failed_ids),
+                "failed_ids": failed_ids,
+                "category_id": str(category_id),
+                "category_name": category.name
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to bulk update transaction categories: {str(e)}"
         )
 
 

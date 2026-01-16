@@ -53,6 +53,7 @@ import {
   Delete,
   Warning,
   List as ListIcon,
+  LocalOffer,
 } from '@mui/icons-material';
 import { financeAPI } from '../services/api';
 import TimePeriodSelector from '../components/TimePeriodSelector';
@@ -196,27 +197,42 @@ const CustomDensitySelector = () => {
 interface CustomToolbarProps {
   selectedRows: string[];
   onDelete: () => void;
+  onBulkCategory: () => void;
 }
 
-const CustomToolbar: React.FC<CustomToolbarProps> = ({ selectedRows, onDelete }) => (
+const CustomToolbar: React.FC<CustomToolbarProps> = ({ selectedRows, onDelete, onBulkCategory }) => (
   <GridToolbarContainer>
     <GridToolbarColumnsButton />
     <GridToolbarFilterButton />
     <CustomDensitySelector />
     <GridToolbarExport />
     {selectedRows.length > 0 && (
-      <Button
-        size="small"
-        startIcon={<Delete />}
-        onClick={onDelete}
-        sx={{ 
-          minWidth: 'auto', 
-          color: 'error.main',
-          '&:hover': { bgcolor: 'error.50' }
-        }}
-      >
-        Delete ({selectedRows.length})
-      </Button>
+      <>
+        <Button
+          size="small"
+          startIcon={<LocalOffer />}
+          onClick={onBulkCategory}
+          sx={{ 
+            minWidth: 'auto', 
+            color: 'primary.main',
+            '&:hover': { bgcolor: 'primary.50' }
+          }}
+        >
+          Change Category ({selectedRows.length})
+        </Button>
+        <Button
+          size="small"
+          startIcon={<Delete />}
+          onClick={onDelete}
+          sx={{ 
+            minWidth: 'auto', 
+            color: 'error.main',
+            '&:hover': { bgcolor: 'error.50' }
+          }}
+        >
+          Delete ({selectedRows.length})
+        </Button>
+      </>
     )}
     <GridToolbarQuickFilter />
   </GridToolbarContainer>
@@ -242,6 +258,9 @@ const Transactions: React.FC = () => {
   const [doubleChargesDialog, setDoubleChargesDialog] = useState(false);
   const [isLoadingDoubleCharges, setIsLoadingDoubleCharges] = useState(false);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [bulkCategoryDropdown, setBulkCategoryDropdown] = useState<{
+    anchorEl: HTMLElement | null;
+  }>({ anchorEl: null });
 
   const fetchData = async (period: string = 'this_year', startDate?: string, endDate?: string) => {
     try {
@@ -393,17 +412,58 @@ const Transactions: React.FC = () => {
     try {
       const response = await financeAPI.updateTransactionCategory(categoryDropdown.transactionId, categoryId);
       if (response.data?.success) {
-        setTransactions(prev =>
-          prev.map(tx =>
+        // Force UI update by creating new array reference
+        setTransactions(prev => {
+          const updated = prev.map(tx =>
             tx.id === categoryDropdown.transactionId
               ? { ...tx, category_name: categoryName, category_id: categoryId }
               : tx
-          )
-        );
+          );
+          return [...updated]; // Force new reference
+        });
         handleCategoryDropdownClose();
       }
     } catch (error) {
       console.error('Error updating transaction category:', error);
+      alert('Failed to update category. Please try again.');
+    }
+  };
+
+  const handleBulkCategoryClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (selectedRows.length === 0) return;
+    setBulkCategoryDropdown({ anchorEl: event.currentTarget });
+  };
+
+  const handleBulkCategoryDropdownClose = () => {
+    setBulkCategoryDropdown({ anchorEl: null });
+  };
+
+  const handleBulkCategorySelect = async (categoryId: string, categoryName: string) => {
+    if (selectedRows.length === 0) return;
+    
+    try {
+      const response = await financeAPI.bulkUpdateTransactionCategory(selectedRows, categoryId);
+      if (response.data?.success) {
+        // Update all selected transactions in the UI
+        setTransactions(prev => {
+          const updated = prev.map(tx =>
+            selectedRows.includes(tx.id)
+              ? { ...tx, category_name: categoryName, category_id: categoryId }
+              : tx
+          );
+          return [...updated]; // Force new reference
+        });
+        
+        // Clear selection and close dropdown
+        setSelectedRows([]);
+        handleBulkCategoryDropdownClose();
+        
+        // Show success message
+        alert(`✅ Successfully updated ${response.data.data.updated_count} transaction(s) to category "${categoryName}"`);
+      }
+    } catch (error) {
+      console.error('Error bulk updating transaction categories:', error);
+      alert('Failed to update categories. Please try again.');
     }
   };
 
@@ -678,7 +738,8 @@ const Transactions: React.FC = () => {
                 showQuickFilter: true, 
                 quickFilterProps: { debounceMs: 500 },
                 selectedRows: selectedRows,
-                onDelete: handleBulkDelete
+                onDelete: handleBulkDelete,
+                onBulkCategory: handleBulkCategoryClick
               } 
             }}
             sx={{
@@ -755,6 +816,15 @@ const Transactions: React.FC = () => {
         onCategorySelect={handleCategorySelect}
         currentCategory={categoryDropdown.currentCategory || undefined}
         transactionId={categoryDropdown.transactionId || ''}
+      />
+
+      <CategoryDropdown
+        anchorEl={bulkCategoryDropdown.anchorEl}
+        open={Boolean(bulkCategoryDropdown.anchorEl)}
+        onClose={handleBulkCategoryDropdownClose}
+        onCategorySelect={handleBulkCategorySelect}
+        currentCategory={undefined}
+        transactionId=""
       />
     </Box>
   );

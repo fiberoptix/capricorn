@@ -176,6 +176,12 @@ export const financeAPI = {
     return response;
   },
 
+  // Bulk update transaction categories
+  bulkUpdateTransactionCategory: async (transactionIds: string[], categoryId: string) => {
+    const response = await axios.put(`${API_BASE_URL}/transactions/bulk/category?category_id=${categoryId}`, transactionIds);
+    return response;
+  },
+
   // Get all categories
   getCategories: async () => {
     const response = await axios.get(`${API_BASE_URL}/categories`);
