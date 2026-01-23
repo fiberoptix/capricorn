@@ -96,10 +96,11 @@ Capricorn supports four deployment environments with automated CI/CD:
 
 ### **☁️ PROD-GCP - Google Cloud** (Interview Demos Only)
 - **Purpose:** Demo environment for interviews (use sparingly to save costs)
-- **URL:** https://capricorn.gothamtechnologies.com
+- **URL:** https://capricorn.gothamtechnologies.com ⚠️ **Not always running** - deployed on-demand
 - **Deployment:** Manual button in GitLab on `production` branch
 - **Features:** GKE Autopilot, Ingress, persistent volumes, auto-scaling
 - **Script:** `./scripts/run-gcp.sh [start|stop|restart|bb|nuke]` (manual)
+- **Note:** For testing, please use **cap.gothamtechnologies.com** (always available)
 
 ---
 
