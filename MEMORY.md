@@ -132,6 +132,63 @@ capricorn_capricorn-network (172.19.0.0/16) - Internal
 **Cause:** NAT hairpinning not supported by router
 **Solution:** Add to `/etc/hosts`: `192.168.1.184 cap.gothamtechnologies.com`
 
+### Issue: HTTPS Mixed Content Errors (API calls blocked)
+**Symptoms:** Page loads but all API calls fail, browser console shows "Mixed Content" errors
+**Cause:** Frontend tried to call `http://hostname:5002` from HTTPS page (browser security blocks this)
+**Root Problem:** `frontend/src/config/api.ts` hardcoded HTTP protocol
+**Solution:** Updated api.ts to auto-detect protocol:
+- HTTPS page → use `https://hostname/api` (Traefik proxy route)
+- HTTP page → use `http://hostname:5002` (direct backend port)
+**Fixed in:** Commit `c83fe2f` (Jan 22, 2026)
+**Result:** Single image now works for ALL environments (DEV/QA/PROD-Local/GCP)
+
+---
+
+## FRONTEND API CONFIGURATION
+
+**File:** `frontend/src/config/api.ts`
+
+**How It Works:**
+
+The frontend auto-detects the correct API endpoint based on how it's accessed:
+
+```typescript
+Priority 1: VITE_API_URL environment variable (build-time)
+  - Used for GCP deployment (different LoadBalancer IPs)
+  - Set during Docker build: VITE_API_URL=<gcp-backend-url>
+
+Priority 2: Protocol auto-detection (runtime)
+  - HTTPS: uses https://${hostname}/api (Traefik proxy)
+  - HTTP: uses http://${hostname}:5002 (direct backend)
+```
+
+**Environment Detection Logic:**
+
+| Environment | Protocol | Detected API URL | Routing |
+|-------------|----------|------------------|---------|
+| DEV | HTTP (localhost:5001) | `http://localhost:5002` | Direct to backend |
+| QA | HTTP (192.168.1.180:5001) | `http://192.168.1.180:5002` | Direct to backend |
+| PROD-Local | HTTPS (cap.gothamtechnologies.com) | `https://cap.gothamtechnologies.com/api` | Via Traefik |
+| PROD-GCP | HTTPS | Uses `VITE_API_URL` build var | GKE Ingress |
+
+**Key Design Decision (Jan 22, 2026):**
+- Initially tried separate docker-compose files + environment variables
+- **Problem:** Vite env vars are build-time, not runtime
+- **Solution:** Protocol auto-detection in source code
+- **Benefit:** Single Docker image works for ALL 4 environments
+- **Maintenance:** Zero ongoing work, automatic for future deployments
+
+**Critical Code:**
+```typescript
+if (window.location.protocol === 'https:') {
+  // PROD-Local / GCP without VITE_API_URL
+  return `${window.location.protocol}//${window.location.host}`;
+} else {
+  // DEV / QA
+  return `http://${window.location.hostname}:5002`;
+}
+```
+
 ---
 
 ## PROJECT INFORMATION
