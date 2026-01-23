@@ -2,7 +2,7 @@
 
 **A unified personal finance platform for tracking investments, retirement planning, and financial analysis.**
 
-> ### 🌐 [**Try the Live Demo → capricorn.gothamtechnologies.com**](http://capricorn.gothamtechnologies.com)
+> ### 🌐 [**Try the Live Demo → cap.gothamtechnologies.com**](https://cap.gothamtechnologies.com)
 > *See it in action before you install!*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -71,24 +71,32 @@
 
 ## 🌐 Deployment Environments
 
-Capricorn supports three deployment environments with automated CI/CD:
+Capricorn supports four deployment environments with automated CI/CD:
 
 ### **🖥️ DEV - Local Development**
 - **Purpose:** Active development on your workstation
+- **URL:** http://localhost:5001
 - **Ports:** All exposed (5001-5004)
 - **Features:** Hot reload, debugging, direct database access
 - **Script:** `./scripts/run-dev.sh [start|stop|restart|bb|nuke]`
 
 ### **🧪 QA - Home Lab Testing**
 - **Purpose:** Automated testing on local Kubernetes
-- **URL:** http://192.168.1.180:5001 (or your QA host)
+- **URL:** http://192.168.1.180:5001
 - **Deployment:** Automatic on `develop` branch push via GitLab CI/CD
 - **Features:** Production-like environment, automated deployments
 - **Script:** `./scripts/run-qa.sh [start|stop|restart|bb|nuke]` (manual)
 
-### **☁️ GCP - Production (Google Cloud)**
-- **Purpose:** Live production deployment
-- **URL:** http://capricorn.gothamtechnologies.com
+### **🏠 PROD-Local - Home Lab Production** ⭐ PRIMARY
+- **Purpose:** Live production deployment (replaces GCP)
+- **URL:** https://cap.gothamtechnologies.com
+- **Deployment:** Manual button in GitLab on `production` branch
+- **Features:** Traefik reverse proxy, Let's Encrypt SSL, persistent storage
+- **Cost Savings:** ~$400/year vs GCP hosting
+
+### **☁️ PROD-GCP - Google Cloud** (Interview Demos Only)
+- **Purpose:** Demo environment for interviews (use sparingly to save costs)
+- **URL:** https://capricorn.gothamtechnologies.com
 - **Deployment:** Manual button in GitLab on `production` branch
 - **Features:** GKE Autopilot, Ingress, persistent volumes, auto-scaling
 - **Script:** `./scripts/run-gcp.sh [start|stop|restart|bb|nuke]` (manual)
@@ -235,10 +243,10 @@ git push gitlab develop
 # 1. Builds frontend + backend Docker images
 # 2. Pushes to GitLab Container Registry
 # 3. Deploys to QA host (192.168.1.180)
-# Result: App live in ~3-5 minutes
+# Result: App live in ~3-5 minutes at http://192.168.1.180:5001
 ```
 
-**GCP Deployment (Manual):**
+**PROD-Local Deployment (Manual):** ⭐ PRIMARY
 ```bash
 # Merge develop to production
 git checkout production
@@ -247,9 +255,19 @@ git push gitlab production
 
 # In GitLab UI:
 # 1. Go to Pipelines
-# 2. Click "Deploy" button next to deploy_gcp
+# 2. Click "Deploy" button next to deploy_prod_local
+# 3. Wait ~2 minutes for deployment
+# Result: App live at https://cap.gothamtechnologies.com
+```
+
+**PROD-GCP Deployment (Manual - Interviews Only):**
+```bash
+# Same as above, but click deploy_prod_gcp instead
+# In GitLab UI:
+# 1. Go to Pipelines
+# 2. Click "Deploy" button next to deploy_prod_gcp
 # 3. Wait 10-15 minutes for GCP deployment
-# Result: App live at capricorn.gothamtechnologies.com
+# Result: App live at https://capricorn.gothamtechnologies.com
 ```
 
 ### Pipeline Stages
@@ -259,8 +277,10 @@ git push gitlab production
 | `build_frontend` | Vite production build | ~40s |
 | `build_backend` | FastAPI Docker image | ~30s |
 | `push_images` | Push to Container Registry | ~30s |
-| `deploy_qa` | Deploy to QA host (develop branch) | ~60s |
-| `deploy_gcp` | Deploy to GCP (production branch, manual) | ~10-15m |
+| `scan` | SonarQube code quality analysis | ~2-3m |
+| `deploy_qa` | Deploy to QA host (develop branch, auto) | ~60s |
+| `deploy_prod_local` | Deploy to PROD-Local (production branch, manual) | ~2m |
+| `deploy_prod_gcp` | Deploy to GCP (production branch, manual, interviews only) | ~10-15m |
 
 **CI/CD Variables Required (GitLab Settings → CI/CD → Variables):**
 - `CI_REGISTRY_USER` - GitLab registry username
