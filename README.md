@@ -15,16 +15,24 @@
 ## ✨ Features
 
 ### 💰 Finance Manager
-- **Transaction Tracking** - Import bank statements from CSV (supports multiple banks)
+- **Plaid Bank Sync** - Auto-download transactions from Bank of America, AMEX, and more via Plaid API
+- **CSV Import** - Manual import from bank statement CSV files (always available as backup)
 - **ML-Powered Categorization** - 97% accuracy auto-tagging with 600+ patterns
+- **Auto-Sync** - Transactions refresh every 15 minutes automatically
 - **Budget Analysis** - Year-over-year spending comparison by category
 - **Period Filtering** - View by month, year, or all-time
 
 ### 📈 Portfolio Manager
-- **Portfolio CRUD** - Create and manage multiple investment portfolios
+- **Hybrid Portfolios** - Manual entry OR auto-sync via Plaid (Schwab, Merrill, Voya, etc.)
+- **Positions View** - Current holdings per ticker with FIFO lot drill-down: fee-inclusive
+  average cost, % of portfolio, unrealized gain, and estimated tax owed (or sheltered) if sold
+- **FIFO Tax-Lot Accounting** - Per-lot cost basis with fees, realized gains split
+  short-term vs long-term using the IRS anniversary rule
 - **Real-Time Prices** - TwelveData API integration for live stock quotes
+- **Plaid Holdings Sync** - Real positions, cost basis, and buy/sell history from your broker
 - **Tax-Aware Analysis** - Break-even calculations considering capital gains taxes
-- **Holdings Tracking** - Buy/sell transactions with cost basis tracking
+- **Distributions Tracking** - Dividend/interest history with YTD and lifetime totals
+- **401k Support** - Institution-specific pricing for retirement fund classes
 
 ### 🏖️ Retirement Planner
 - **30-Year Projections** - Compound growth calculations for all accounts
@@ -34,21 +42,29 @@
 
 ### 🧾 Tax Calculator
 - **State Comparison** - Compare tax burden across all 50 states
-- **2025 Tax Tables** - Federal progressive brackets with standard deductions
-- **Capital Gains** - Short-term vs long-term rate calculations
+- **2026 Tax Tables** - Federal progressive brackets with standard deductions (DB-driven, updated yearly)
+- **Capital Gains** - Short-term vs long-term stacking across the 0/15/20% brackets, plus NIIT and state/local
 - **Savings Calculator** - See potential savings from relocation
 
 ### 👤 Unified Profile
 - **Single Data Entry** - One place for all your financial parameters
+- **Sync from Portfolio** - Retirement balances (401k, IRA, trading) can track live
+  portfolio values automatically instead of manual entry
+- **Static Retirement Year** - Enter the year you plan to retire; time-based
+  calculations never go stale
 - **Auto-Refresh** - Changes propagate to all modules instantly
-- **49 Configurable Fields** - Comprehensive personal finance modeling
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+                    ┌──────────────┐    ┌──────────────┐
+                    │  Plaid API   │    │  TwelveData  │
+                    │ Bank & Invest│    │ Stock Prices │
+                    └──────┬───────┘    └──────┬───────┘
+                           │                   │
+┌──────────────┐    ┌──────▼───────┐    ┌──────▼───────┐
 │   Frontend   │───▶│   Backend    │───▶│  PostgreSQL  │
 │  React/Vite  │    │   FastAPI    │    │   Database   │
 │   Port 5001  │    │   Port 5002  │    │   Port 5003  │
@@ -62,9 +78,10 @@
 ```
 
 **Tech Stack:**
-- **Frontend:** React 18, TypeScript, Vite, Material-UI, Tailwind CSS
+- **Frontend:** React 18, TypeScript, Vite 8, Material-UI v7 (Node 22)
 - **Backend:** FastAPI, Python 3.11, SQLAlchemy 2.0
 - **Database:** PostgreSQL 15, Redis 7
+- **Integrations:** Plaid API (bank + investment sync), TwelveData (stock prices)
 - **Deployment:** Docker Compose, Kubernetes (GKE), GitLab CI/CD
 
 ---
@@ -153,6 +170,10 @@ Capricorn includes three environment-specific deployment scripts:
 - `bb` - Burn & Build (rebuild from scratch + run QA tests)
 - `nuke` - Complete destruction (requires typing 'NUKE')
 
+> ℹ️ **Note:** The QA host is deployed by the GitLab pipeline (registry images), so
+> `run-qa.sh` cleanup targets don't match pipeline-deployed resources — clean the QA
+> box manually with `docker` commands when needed.
+
 ### 🎮 Try with Demo Data (Recommended for First-Time Users)
 
 Want to see all features in action right away? Import the included demo dataset:
@@ -177,12 +198,32 @@ This lets you explore all features without entering your own data first!
 
 1. Navigate to http://localhost:5001
 2. Go to **Profile** tab and enter your financial information
-3. Import transactions via **Finance → Upload** (CSV format)
-4. Add portfolios via **Portfolio → New Portfolio**
+3. Connect banks via **Data & Plaid → Plaid Connectivity** (or import CSV via **Finance → Upload**)
+4. Add portfolios via **Portfolio → New Portfolio** (Manual or Connect via Plaid)
 
 ---
 
 ## ⚙️ Configuration
+
+### Plaid API (Optional - For Automatic Bank & Investment Sync)
+
+Connect your bank accounts and brokerage for automatic transaction and portfolio sync:
+
+1. Sign up at [dashboard.plaid.com](https://dashboard.plaid.com) (free to start)
+2. Set environment variables before starting Docker:
+
+```bash
+export PLAID_CLIENT_ID=your_client_id
+export PLAID_SECRET=your_secret
+export PLAID_ENV=production    # or 'sandbox' for testing
+```
+
+3. Start the app and go to **Data & Plaid → Plaid Connectivity** to connect banks
+4. For investments, go to **Portfolio → New Portfolio → Connect via Plaid**
+
+**Without Plaid:** The app works fully with manual CSV imports and manual portfolio entry. Plaid is additive -- if credentials aren't set, Plaid features are hidden.
+
+**Cost:** ~$0.30/account/month for bank transactions, ~$0.35/account/month for investment data. Sync frequency doesn't affect cost.
 
 ### TwelveData API (Optional - For Live Stock Prices)
 
@@ -296,41 +337,53 @@ git push gitlab production
 
 ### Local Development
 
-```bash
-# Start just the database and redis
-cd docker
-docker-compose up -d postgres redis
+The recommended workflow is the full Docker stack (`./scripts/run-dev.sh start`) —
+both frontend (Vite hot reload) and backend (`uvicorn --reload`) pick up source
+changes live via volume mounts, no rebuild needed.
 
-# Backend development
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 5002
-
-# Frontend development
-cd frontend
-npm install
-npm run dev
-```
+> ⚠️ **npm must run inside the container.** If your working copy lives on a network
+> share (NAS/SMB), host-side `npm install` fails on symlinks and corrupts
+> `node_modules`. For dependency changes:
+>
+> ```bash
+> # Update the lockfile inside a container, then rebuild the image
+> docker run --rm -v $PWD/frontend:/app -w /app node:22-alpine npm install --package-lock-only
+> docker compose -f docker/docker-compose.dev.yml build frontend
+> docker compose -f docker/docker-compose.dev.yml up -d --force-recreate --renew-anon-volumes frontend
+> ```
 
 ### API Documentation
 
-Once running, access the API docs at:
+Available in **DEV only** (disabled when `DEBUG=false`, i.e. in QA/PROD):
 - Swagger UI: http://localhost:5002/docs
 - ReDoc: http://localhost:5002/redoc
+
+> Note: all mutating API requests (POST/PUT/PATCH/DELETE) require the
+> `X-Capricorn-Client: 1` header — scripts and `curl` calls must send it or
+> they receive a 403.
 
 ---
 
 ## 📊 Data Import
 
-### Supported Banks
+### Plaid (Recommended)
 
-The ML tagger recognizes transactions from:
-- Bank of America
+Connect your banks directly for automatic transaction sync:
+- **Bank of America** - Checking, savings, credit cards
+- **American Express** - Credit cards
+- **Charles Schwab** - Brokerage (requires OAuth registration on Plaid Dashboard)
+- **Merrill Lynch** - IRA, brokerage
+- **Voya / BNY Mellon** - 401k retirement accounts
+- And thousands more via Plaid
+
+Transactions auto-sync every 15 minutes. Internal transfers and credit card payments are automatically filtered.
+
+### CSV Import (Manual Fallback)
+
+The ML tagger recognizes CSV files from:
+- Bank of America (checking and credit)
 - American Express
-- Chase (coming soon)
 - Generic CSV format
-
-### CSV Format
 
 ```csv
 Date,Description,Amount,Category
@@ -340,10 +393,17 @@ Date,Description,Amount,Category
 
 ### Export/Import
 
-Use the **Data** tab to:
+Use the **Data & Plaid** tab to:
 - **Export** all data to JSON backup
 - **Import** from a previous backup
 - **Clear** all data and start fresh
+
+Plaid connections (access tokens, sync cursors, cutoff dates) are preserved in exports. After importing a backup on a new environment, Plaid syncs continue automatically -- no reconnecting needed.
+
+**Safety features:** Plaid access tokens in export files are Fernet-encrypted (requires
+the same `EXPORT_ENCRYPTION_KEY` on both environments to round-trip). Import and Clear
+require explicit confirmation tokens and automatically snapshot the database before
+touching anything. Imports are transactional -- a bad file leaves the database untouched.
 
 ---
 
@@ -353,7 +413,16 @@ This is a **single-user personal finance application** designed for home lab use
 
 - No authentication system (designed for private network)
 - All data stored locally in PostgreSQL
-- No data leaves your network (except optional TwelveData API calls)
+- No data leaves your network except optional API calls to:
+  - **Plaid** - Bank/investment connectivity (your bank credentials are never shared with the app)
+  - **TwelveData** - Stock price quotes
+
+**Built-in hardening** (2026 security pass):
+- CORS pinned to known origins; all mutating requests require a custom client header
+- Plaid tokens encrypted in export files; API docs disabled outside DEV
+- Destructive operations (clear/import) require confirmation tokens + auto-snapshot first
+- Demo mode denies all mutations by default; 500 errors are sanitized
+- Upload size limits; parameterized SQL throughout
 
 **For production use**, consider adding:
 - Authentication layer
@@ -371,6 +440,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
+- [Plaid](https://plaid.com/) for bank and investment connectivity
 - [TwelveData](https://twelvedata.com/) for stock market API
 - [Material-UI](https://mui.com/) for React components
 - [Recharts](https://recharts.org/) for interactive charts
